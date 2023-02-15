@@ -1,23 +1,32 @@
-use clap::Command;
-
+use clap::{Parser, Subcommand};
 use super::clone::Clone;
 
-#[derive(Debug)]
-pub struct Cli {
-    pub cmds: Command,
+#[derive(Parser)]
+#[command(author, version, about, long_about = None)]
+pub(crate) struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
 }
+
 
 impl Cli {
     pub fn new() -> Self {
-        Cli { cmds: default() }
+        Cli::parse()
+    }
+
+    pub fn run(&self) {
+        match &self.command {
+            Some(_clone) => {
+                println!("Clone a repository into a new directory")
+            },
+            None => todo!(),
+        }
     }
 }
 
-fn default() -> Command {
-    Command::new("agrm")
-        .about("A git repositories manager for local usage.")
-        .subcommand_required(true)
-        .arg_required_else_help(true)
-        .allow_external_subcommands(true)
-        .subcommand(Clone::new())
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Clones repositories
+   Clone(Clone)
 }
