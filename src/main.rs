@@ -5,12 +5,12 @@ use cmd::cli::Cli;
 use clap::Parser;
 
 fn main() {
-    if let Err(e) = Cli::try_parse().and_then(try_main) {
+    if let Err(e) = Cli::try_parse().and_then(try_run) {
         println!("{}", e);
         process::exit(1);
     }
 }
 
-fn try_main(c: Cli) -> Result<(), clap::Error> {
+fn try_run(c: Cli) -> Result<(), clap::Error> {
     c.run()
 }
