@@ -1,5 +1,5 @@
+use crate::cmd::clone;
 use clap::{Parser, Subcommand};
-use super::clone::Clone;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -8,25 +8,18 @@ pub(crate) struct Cli {
     command: Option<Commands>,
 }
 
-
 impl Cli {
-    pub fn new() -> Self {
-        Cli::parse()
-    }
-
-    pub fn run(&self) {
-        match &self.command {
-            Some(_clone) => {
-                println!("Clone a repository into a new directory")
-            },
+    pub fn run(self) -> ! {
+        match self.command {
+            Some(Commands::Clone(args)) => clone::run(args),
             None => todo!(),
         }
     }
 }
 
-
 #[derive(Subcommand)]
 enum Commands {
     /// Clones repositories
-   Clone(Clone)
+    #[command(arg_required_else_help = true)]
+    Clone(clone::CloneArgs),
 }
