@@ -1,4 +1,5 @@
 mod cmd;
+pub mod settings;
 mod logging;
 use std::process;
 
