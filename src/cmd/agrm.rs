@@ -1,10 +1,12 @@
+use std::process;
+
 use crate::{cmd::clone, logging, settings::Settings};
 use clap::{Parser, Subcommand};
-use log::debug;
+use log::{debug, error};
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
-pub(crate) struct Cli {
+#[command(author, version, about, long_about = "A Git Repository Manager")]
+pub(crate) struct Agrm {
     #[arg(short, long)]
     config: Option<String>,
     #[command(subcommand)]
@@ -16,33 +18,48 @@ pub(crate) struct Cli {
     settings: crate::settings::Settings,
 }
 
-impl Cli {
-    pub fn run(mut self) -> ! {
-        self.init_logger();
-        self.get_settings();
+impl Agrm {
+    pub fn new() -> Option<Self> {
+        match Self::try_parse() {
+            Ok(cli) => Some(cli.init()),
+            Err(e) => {
+                error!("{}", e);
+                process::exit(1)
+            }
+        }
+    }
 
+    fn init(self) -> Self {
+        self.init_logger().init_settings()
+    }
+
+    pub fn run(self) -> ! {
         match self.command {
             Some(Commands::Clone(args)) => clone::run(args),
             None => todo!(),
         }
     }
 
-    fn get_settings(&mut self) {
+    fn init_settings(mut self) -> Self {
         if let Some(config) = &self.config {
             debug!("Using config: {}", config);
-            self.settings = Settings::from(config.clone()).unwrap();
+            self.settings = Settings::from(config.clone());
         } else {
             debug!("Using config from sources");
-            self.settings = Settings::new().unwrap();
+            self.settings = Settings::new();
         }
         debug!("Settings: {:?}", self.settings);
+
+        self
     }
 
-    fn init_logger(&self) {
-        match self.verbose {
+    fn init_logger(self) -> Self {
+        match &self.verbose {
             true => logging::init(log::Level::Debug),
             false => logging::init(log::Level::Info),
-        }
+        };
+
+        self
     }
 }
 
