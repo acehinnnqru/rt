@@ -1,14 +1,15 @@
 mod cmd;
-pub mod settings;
 mod logging;
+pub mod settings;
 use std::process;
 
 use clap::Parser;
 use cmd::cli::Cli;
+use log::error;
 
 fn main() {
     if let Err(e) = Cli::try_parse().and_then(try_run) {
-        println!("{}", e);
+        error!("{}", e);
         process::exit(1);
     }
 }

@@ -1,6 +1,6 @@
-use crate::{cmd::clone, settings::Settings, logging};
+use crate::{cmd::clone, logging, settings::Settings};
 use clap::{Parser, Subcommand};
-use log::{debug, info};
+use log::debug;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

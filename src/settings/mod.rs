@@ -1,12 +1,12 @@
 pub mod global;
 
 use config::ConfigError;
+use log::{debug, error, info};
 use serde::Deserialize;
-use log::{debug, info, error};
 
 use crate::settings::global::GlobalSettings;
 
-const CONFIG_FILE: &str = "agrm.toml"; 
+const CONFIG_FILE: &str = "agrm.toml";
 const DOT_CONFIG_FILE: &str = ".agrm.toml";
 
 #[derive(Debug, Deserialize, Default, PartialEq)]
@@ -54,9 +54,8 @@ impl Settings {
                 error!("Error loading configuration: {}", e);
                 info!("Using default configuration");
                 Ok(Self::default())
-            },
+            }
             Ok(s) => s.try_deserialize(),
         }
     }
 }
-

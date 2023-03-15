@@ -20,6 +20,9 @@ pub struct GlobalSettings {
 impl Default for GlobalSettings {
     fn default() -> Self {
         use StructureNode::*;
-        Self { dev: false, structure: vec![Platform, NameSpace, Name] }
+        Self {
+            dev: false,
+            structure: vec![Platform, NameSpace, Name],
+        }
     }
 }

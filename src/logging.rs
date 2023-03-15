@@ -1,4 +1,4 @@
-use log::{Level, Metadata, Record, debug};
+use log::{debug, Level, Metadata, Record};
 
 struct AgrmLogger;
 
