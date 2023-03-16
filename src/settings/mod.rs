@@ -1,6 +1,5 @@
 pub mod global;
 
-use log::{debug, error, info};
 use serde::Deserialize;
 
 use crate::settings::global::GlobalSettings;

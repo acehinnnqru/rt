@@ -1,8 +1,7 @@
 use std::process;
 
-use crate::{cmd::clone, logging, settings::Settings};
+use crate::{cmd::clone, settings::Settings};
 use clap::{Parser, Subcommand};
-use log::{debug, error};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = "A Git Repository Manager")]
@@ -30,7 +29,7 @@ impl Agrm {
     }
 
     fn init(self) -> Self {
-        self.init_logger().init_settings()
+        self.init_settings()
     }
 
     pub fn run(self) -> ! {
@@ -49,15 +48,6 @@ impl Agrm {
             self.settings = Settings::new();
         }
         debug!("Settings: {:?}", self.settings);
-
-        self
-    }
-
-    fn init_logger(self) -> Self {
-        match &self.verbose {
-            true => logging::init(log::Level::Debug),
-            false => logging::init(log::Level::Info),
-        };
 
         self
     }
