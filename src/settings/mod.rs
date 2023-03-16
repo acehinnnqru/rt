@@ -3,6 +3,7 @@ pub mod global;
 use serde::Deserialize;
 
 use crate::settings::global::GlobalSettings;
+use crate::global::AGRM_NAME;
 
 const CONFIG_FILE: &str = "agrm.toml";
 const DOT_CONFIG_FILE: &str = ".agrm.toml";
@@ -19,7 +20,7 @@ fn config_path() -> Vec<String> {
     vec![
         format!("{}/Roaming/{}", app_data, CONFIG_FILE),
         format!("{}/{}", app_data, DOT_CONFIG_FILE),
-        format!("{}/{}", app_data, DOT_CONFIG_FILE),
+        format!("{}/{}/{}", app_data, AGRM_NAME, DOT_CONFIG_FILE),
     ]
 }
 
@@ -28,7 +29,7 @@ fn config_path() -> Vec<String> {
     debug!("Using unix config path");
     let home = std::env::var("HOME").unwrap();
     vec![
-        format!("{}/.config/{}/{}", home, "agrm", CONFIG_FILE),
+        format!("{}/.config/{}/{}", home, AGRM_NAME, CONFIG_FILE),
         format!("{}/.config/{}", home, CONFIG_FILE),
         format!("{}/{}", home, DOT_CONFIG_FILE),
     ]
