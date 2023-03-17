@@ -2,8 +2,8 @@ pub mod global;
 
 use serde::Deserialize;
 
-use crate::settings::global::GlobalSettings;
 use crate::global::AGRM_NAME;
+use crate::settings::global::GlobalSettings;
 
 const CONFIG_FILE: &str = "agrm.toml";
 const DOT_CONFIG_FILE: &str = ".agrm.toml";

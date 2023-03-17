@@ -5,19 +5,17 @@ use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = "A Git Repository Manager")]
-pub(crate) struct Agrm {
+pub(crate) struct Cli {
     #[arg(short, long)]
     config: Option<String>,
     #[command(subcommand)]
     command: Option<Commands>,
-    #[arg(long)]
-    verbose: bool,
 
     #[clap(skip)]
     settings: crate::settings::Settings,
 }
 
-impl Agrm {
+impl Cli {
     pub fn new() -> Option<Self> {
         match Self::try_parse() {
             Ok(cli) => Some(cli.init()),

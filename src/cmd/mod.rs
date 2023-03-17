@@ -1,2 +1,2 @@
-pub mod agrm;
+pub mod cli;
 mod clone;
