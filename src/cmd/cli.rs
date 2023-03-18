@@ -1,6 +1,6 @@
 use std::process;
 
-use crate::cmd::clone;
+use crate::{cmd::clone, settings::Settings};
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
@@ -13,9 +13,9 @@ pub(crate) struct Cli {
 }
 
 impl Cli {
-    pub fn new() -> Option<Self> {
+    pub fn new() -> Self {
         match Self::try_parse() {
-            Ok(cli) => Some(cli),
+            Ok(cli) => cli,
             Err(e) => {
                 error!("Parsing parameters error.");
                 error!("Please read the usage below.");
@@ -26,9 +26,9 @@ impl Cli {
         }
     }
 
-    pub fn run(self) -> ! {
+    pub fn run(self, settings: &Settings) -> ! {
         match self.command {
-            Some(Commands::Clone(args)) => clone::run(args),
+            Some(Commands::Clone(args)) => clone::run(settings, args),
             None => todo!(),
         }
     }
