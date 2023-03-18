@@ -7,8 +7,8 @@ pub fn load(cli: &Cli) -> Settings {
     let s = match s {
         Ok(s) => s,
         Err(_) => {
-            println!("Loading settings error.");
-            println!("Please check your configuration file.");
+            eprintln!("Loading settings error.");
+            eprintln!("Please check your configuration file.");
 
             Settings::default()
         }
