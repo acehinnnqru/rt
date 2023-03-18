@@ -32,14 +32,20 @@ impl Agrm {
 
     fn init_settings(mut self) -> Self {
         let config = self.cli.as_ref().unwrap().config.clone();
-        match config {
-            Some(config) => {
-                self.settings = Some(Settings::from(config));
+        let s = match config {
+            Some(config) => Settings::from_file(config),
+            None => Settings::from_configs(),
+        };
+        match s {
+            Ok(s) => self.settings = Some(s),
+            Err(e) => {
+                error!("Error while loading settings: {}", e);
+                warn!("Using default settings");
+                self.settings = Some(Settings::default());
             }
-            None => {
-                self.settings = Some(Settings::new());
-            }
-        }
+        };
+
+        debug!("Settings: {:?}", self.settings);
 
         self
     }

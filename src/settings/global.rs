@@ -14,8 +14,8 @@ pub enum StructureNode {
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct GlobalSettings {
-    structure: Vec<StructureNode>,
-    root: String,
+    pub structure: Option<Vec<StructureNode>>,
+    pub root: Option<String>,
 }
 
 #[cfg(target_family = "windows")]
@@ -39,8 +39,8 @@ impl Default for GlobalSettings {
     fn default() -> Self {
         use StructureNode::*;
         Self {
-            root: os_default_root(),
-            structure: vec![Platform, NameSpace, Name],
+            root: Some(os_default_root()),
+            structure: Some(vec![Platform, NameSpace, Name]),
         }
     }
 }

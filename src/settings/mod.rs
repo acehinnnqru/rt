@@ -1,5 +1,6 @@
 pub mod global;
 
+use config::ConfigError;
 use serde::Deserialize;
 
 use crate::global::AGRM_NAME;
@@ -8,9 +9,11 @@ use crate::settings::global::GlobalSettings;
 const CONFIG_FILE: &str = "agrm.toml";
 const DOT_CONFIG_FILE: &str = ".agrm.toml";
 
+pub type SettingsError = ConfigError;
+
 #[derive(Debug, Deserialize, Default, PartialEq)]
 pub struct Settings {
-    pub global: GlobalSettings,
+    pub global: Option<GlobalSettings>,
 }
 
 #[cfg(target_family = "windows")]
@@ -34,22 +37,25 @@ fn config_path() -> Vec<String> {
 }
 
 impl Settings {
-    pub fn new() -> Self {
+    pub fn from_configs() -> Result<Settings, SettingsError> {
         Self::build_from(config_path())
     }
 
-    pub fn from(path: String) -> Self {
-        Self::build_from(vec![path])
+    pub fn from_file(path: String) -> Result<Settings, SettingsError> {
+        let s = config::Config::builder().add_source(config::File::with_name(&path));
+        match s.build() {
+            Err(e) => Err(e),
+            Ok(s) => s.try_deserialize(),
+        }
     }
 
-    fn build_from(paths: Vec<String>) -> Self {
+    fn build_from(paths: Vec<String>) -> Result<Settings, SettingsError> {
         let mut s = config::Config::builder();
         for path in paths {
             s = s.add_source(config::File::with_name(&path).required(false));
         }
-        match s.build() {
-            Err(_) => Self::default(),
-            Ok(s) => s.try_deserialize().unwrap_or(Self::default()),
-        }
+
+        // s.build() won't fail because all sources are optional
+        s.build().unwrap().try_deserialize()
     }
 }
