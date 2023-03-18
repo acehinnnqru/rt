@@ -6,8 +6,6 @@ use serde::Deserialize;
 use crate::global::GlobalSettings;
 
 pub(crate) const AGRM_NAME: &str = "agrm";
-const CONFIG_FILE: &str = "agrm.toml";
-const DOT_CONFIG_FILE: &str = ".agrm.toml";
 
 pub type SettingsError = ConfigError;
 
@@ -16,31 +14,7 @@ pub struct Settings {
     pub global: Option<GlobalSettings>,
 }
 
-#[cfg(target_family = "windows")]
-fn config_path() -> Vec<String> {
-    let app_data = std::env::var("AppData").unwrap();
-    vec![
-        format!("{}/Roaming/{}", app_data, CONFIG_FILE),
-        format!("{}/{}", app_data, DOT_CONFIG_FILE),
-        format!("{}/{}/{}", app_data, AGRM_NAME, DOT_CONFIG_FILE),
-    ]
-}
-
-#[cfg(target_family = "unix")]
-fn config_path() -> Vec<String> {
-    let home = std::env::var("HOME").unwrap();
-    vec![
-        format!("{}/.config/{}/{}", home, AGRM_NAME, CONFIG_FILE),
-        format!("{}/.config/{}", home, CONFIG_FILE),
-        format!("{}/{}", home, DOT_CONFIG_FILE),
-    ]
-}
-
 impl Settings {
-    pub fn from_default_sources() -> Result<Settings, SettingsError> {
-        Self::build_from(config_path())
-    }
-
     pub fn from_multi_files(configs: Vec<String>) -> Result<Settings, SettingsError> {
         Self::build_from(configs)
     }

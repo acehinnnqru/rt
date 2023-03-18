@@ -8,7 +8,7 @@ pub fn main() -> ! {
     init();
 
     let cli = Cli::new();
-    let settings = settings::load(&cli);
+    let settings = settings::load();
 
     cli.run(&settings)
 }
