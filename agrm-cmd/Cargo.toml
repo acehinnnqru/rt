@@ -9,4 +9,3 @@ edition = "2021"
 agrm-settings = { version = "0.1.0", path = "../agrm-settings" }
 clap = { version = "4.1.10", features = ["cargo", "derive"] }
 config = "0.13.3"
-log = "0.4.17"

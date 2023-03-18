@@ -17,9 +17,6 @@ impl Cli {
         match Self::try_parse() {
             Ok(cli) => cli,
             Err(e) => {
-                error!("Parsing parameters error.");
-                error!("Please read the usage below.");
-                println!();
                 println!("{}", e);
                 process::exit(1)
             }

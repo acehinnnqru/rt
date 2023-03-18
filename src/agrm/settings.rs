@@ -1,20 +1,18 @@
-use agrm_settings::Settings;
 use agrm_cmd::cli::Cli;
+use agrm_settings::Settings;
 
 pub fn load(cli: &Cli) -> Settings {
     let s = cli.config.as_ref().map(Settings::from_file).unwrap();
 
     let s = match s {
         Ok(s) => s,
-        Err(e) => {
-            error!("Loading settings error.");
-            error!("Please check your configuration file.");
-            error!("Error: {}", e);
+        Err(_) => {
+            println!("Loading settings error.");
+            println!("Please check your configuration file.");
 
             Settings::default()
         }
     };
 
-    debug!("Settings: {:?}", s);
     s
 }
