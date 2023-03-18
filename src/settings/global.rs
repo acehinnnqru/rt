@@ -1,3 +1,4 @@
+use clap::crate_name;
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
@@ -13,15 +14,32 @@ pub enum StructureNode {
 
 #[derive(Deserialize, Debug, PartialEq)]
 pub struct GlobalSettings {
-    dev: bool,
     structure: Vec<StructureNode>,
+    root: String,
+}
+
+#[cfg(target_family = "windows")]
+fn os_default_root() -> String {
+    std::path::Path::new(std::env::var("USERPROFILE"))
+        .join(format!(".{}", crate_name!()))
+        .to_string_lossy()
+        .to_string()
+}
+
+#[cfg(target_family = "unix")]
+fn os_default_root() -> String {
+    std::path::Path::new(&std::env::var("HOME").unwrap())
+        .join(format!(".{}", crate_name!()))
+        .join("root")
+        .to_string_lossy()
+        .to_string()
 }
 
 impl Default for GlobalSettings {
     fn default() -> Self {
         use StructureNode::*;
         Self {
-            dev: false,
+            root: os_default_root(),
             structure: vec![Platform, NameSpace, Name],
         }
     }

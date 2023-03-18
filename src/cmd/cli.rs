@@ -1,33 +1,26 @@
 use std::process;
 
-use crate::{cmd::clone, settings::Settings};
+use crate::cmd::clone;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = "A Git Repository Manager")]
 pub(crate) struct Cli {
     #[arg(short, long)]
-    config: Option<String>,
+    pub config: Option<String>,
     #[command(subcommand)]
     command: Option<Commands>,
-
-    #[clap(skip)]
-    settings: crate::settings::Settings,
 }
 
 impl Cli {
     pub fn new() -> Option<Self> {
         match Self::try_parse() {
-            Ok(cli) => Some(cli.init()),
+            Ok(cli) => Some(cli),
             Err(e) => {
-                error!("{}", e);
+                println!("{}", e);
                 process::exit(1)
             }
         }
-    }
-
-    fn init(self) -> Self {
-        self.init_settings()
     }
 
     pub fn run(self) -> ! {
@@ -35,19 +28,6 @@ impl Cli {
             Some(Commands::Clone(args)) => clone::run(args),
             None => todo!(),
         }
-    }
-
-    fn init_settings(mut self) -> Self {
-        if let Some(config) = &self.config {
-            debug!("Using config: {}", config);
-            self.settings = Settings::from(config.clone());
-        } else {
-            debug!("Using config from sources");
-            self.settings = Settings::new();
-        }
-        debug!("Settings: {:?}", self.settings);
-
-        self
     }
 }
 

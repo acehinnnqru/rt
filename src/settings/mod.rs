@@ -15,7 +15,6 @@ pub struct Settings {
 
 #[cfg(target_family = "windows")]
 fn config_path() -> Vec<String> {
-    debug!("Using windows config path");
     let app_data = std::env::var("AppData").unwrap();
     vec![
         format!("{}/Roaming/{}", app_data, CONFIG_FILE),
@@ -26,7 +25,6 @@ fn config_path() -> Vec<String> {
 
 #[cfg(target_family = "unix")]
 fn config_path() -> Vec<String> {
-    debug!("Using unix config path");
     let home = std::env::var("HOME").unwrap();
     vec![
         format!("{}/.config/{}/{}", home, AGRM_NAME, CONFIG_FILE),
@@ -45,17 +43,12 @@ impl Settings {
     }
 
     fn build_from(paths: Vec<String>) -> Self {
-        debug!("Loading configuration from: {:?}", paths);
         let mut s = config::Config::builder();
         for path in paths {
             s = s.add_source(config::File::with_name(&path).required(false));
         }
         match s.build() {
-            Err(e) => {
-                error!("Error loading configuration: {}", e);
-                info!("Using default configuration");
-                Self::default()
-            }
+            Err(_) => Self::default(),
             Ok(s) => s.try_deserialize().unwrap_or(Self::default()),
         }
     }
