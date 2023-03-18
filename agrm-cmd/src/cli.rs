@@ -6,8 +6,6 @@ use clap::{Parser, Subcommand};
 #[derive(Parser)]
 #[command(author, version, about, long_about = "A Git Repository Manager")]
 pub struct Cli {
-    #[arg(short, long)]
-    pub config: Option<String>,
     #[command(subcommand)]
     command: Option<Commands>,
 }
