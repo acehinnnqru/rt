@@ -1,0 +1,12 @@
+[package]
+name = "agrm-cmd"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+agrm-settings = { version = "0.1.0", path = "../agrm-settings" }
+clap = { version = "4.1.10", features = ["cargo", "derive"] }
+config = "0.13.3"
+log = "0.4.17"
