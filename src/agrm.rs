@@ -1,52 +1,32 @@
 use crate::{cmd::cli::Cli, settings::Settings};
+use clap::crate_name;
 
-#[derive(Default)]
-pub struct Agrm {
-    cli: Option<Cli>,
-    settings: Option<Settings>,
+pub static AGRM_NAME: &str = crate_name!();
+
+pub fn run() -> ! {
+    let cli = Cli::new();
+    let settings = load_settings(&cli);
+
+    cli.run(&settings)
 }
 
-impl Agrm {
-    pub fn init() -> Self {
-        let mut agrm = Self::default();
-        agrm.init_logger();
-        let c = Cli::new();
-        agrm.cli = c;
+fn load_settings(cli: &Cli) -> Settings {
+    let s = cli
+        .config
+        .as_ref()
+        .map_or_else(Settings::from_configs, Settings::from_file);
 
-        agrm.init_settings()
-    }
+    let s = match s {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Loading settings error.");
+            error!("Please check your configuration file.");
+            error!("Error: {}", e);
 
-    pub fn run(self) -> ! {
-        self.cli.unwrap().run();
-    }
+            Settings::default()
+        }
+    };
 
-    fn init_logger(&self) {
-        let env = env_logger::Env::default().filter_or("AGRM_LOG", "info");
-
-        env_logger::Builder::from_env(env)
-            .format_timestamp(None)
-            .format_target(false)
-            .format_module_path(false)
-            .init();
-    }
-
-    fn init_settings(mut self) -> Self {
-        let config = self.cli.as_ref().unwrap().config.clone();
-        let s = match config {
-            Some(config) => Settings::from_file(config),
-            None => Settings::from_configs(),
-        };
-        match s {
-            Ok(s) => self.settings = Some(s),
-            Err(e) => {
-                error!("Error while loading settings: {}", e);
-                warn!("Using default settings");
-                self.settings = Some(Settings::default());
-            }
-        };
-
-        debug!("Settings: {:?}", self.settings);
-
-        self
-    }
+    debug!("Settings: {:?}", s);
+    s
 }

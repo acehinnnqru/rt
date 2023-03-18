@@ -3,7 +3,7 @@ pub mod global;
 use config::ConfigError;
 use serde::Deserialize;
 
-use crate::global::AGRM_NAME;
+use crate::agrm::AGRM_NAME;
 use crate::settings::global::GlobalSettings;
 
 const CONFIG_FILE: &str = "agrm.toml";
@@ -41,8 +41,8 @@ impl Settings {
         Self::build_from(config_path())
     }
 
-    pub fn from_file(path: String) -> Result<Settings, SettingsError> {
-        let s = config::Config::builder().add_source(config::File::with_name(&path));
+    pub fn from_file(path: &String) -> Result<Settings, SettingsError> {
+        let s = config::Config::builder().add_source(config::File::with_name(path));
         match s.build() {
             Err(e) => Err(e),
             Ok(s) => s.try_deserialize(),

@@ -1,4 +1,6 @@
 use clap::Args;
+
+use crate::settings::Settings;
 extern crate clap;
 
 #[derive(Args, Debug)]
@@ -9,6 +11,6 @@ pub struct CloneArgs {
     repositories: Vec<String>,
 }
 
-pub fn run(_args: CloneArgs) -> ! {
+pub fn run(_setting: &Settings, _args: CloneArgs) -> ! {
     todo!()
 }
