@@ -6,5 +6,5 @@ pub mod settings;
 extern crate log;
 
 fn main() {
-    agrm::run()
+    agrm::main()
 }
