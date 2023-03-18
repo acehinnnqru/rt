@@ -1,14 +1,28 @@
+use std::process;
+
 use crate::cmd::clone;
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[command(author, version, about, long_about = None)]
+#[command(author, version, about, long_about = "A Git Repository Manager")]
 pub(crate) struct Cli {
+    #[arg(short, long)]
+    pub config: Option<String>,
     #[command(subcommand)]
     command: Option<Commands>,
 }
 
 impl Cli {
+    pub fn new() -> Option<Self> {
+        match Self::try_parse() {
+            Ok(cli) => Some(cli),
+            Err(e) => {
+                println!("{}", e);
+                process::exit(1)
+            }
+        }
+    }
+
     pub fn run(self) -> ! {
         match self.command {
             Some(Commands::Clone(args)) => clone::run(args),
