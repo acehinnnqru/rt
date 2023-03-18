@@ -17,7 +17,7 @@ impl Cli {
         match Self::try_parse() {
             Ok(cli) => cli,
             Err(e) => {
-                println!("{}", e);
+                eprintln!("{}", e);
                 process::exit(1)
             }
         }
