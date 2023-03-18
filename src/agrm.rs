@@ -3,7 +3,7 @@ use clap::crate_name;
 
 pub static AGRM_NAME: &str = crate_name!();
 
-pub fn run() -> ! {
+pub fn main() -> ! {
     init();
 
     let cli = Cli::new();
