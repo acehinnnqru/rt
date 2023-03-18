@@ -1,5 +1,5 @@
-use serde::Deserialize;
 use crate::AGRM_NAME;
+use serde::Deserialize;
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]

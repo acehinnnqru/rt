@@ -1,7 +1,6 @@
 use agrm_cmd as cmd;
 
 mod settings;
-mod logger;
 
 use cmd::cli::Cli;
 
@@ -14,7 +13,4 @@ pub fn main() -> ! {
     cli.run(&settings)
 }
 
-pub fn init() {
-    logger::init();
-}
-
+pub fn init() {}
