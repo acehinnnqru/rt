@@ -22,7 +22,7 @@ pub fn load() -> Settings {
         false => Ok(init_once()),
     };
 
-    let s = match s {
+    match s {
         Ok(s) => s,
         Err(_) => {
             eprintln!("Loading settings error.");
@@ -30,9 +30,7 @@ pub fn load() -> Settings {
 
             Settings::default()
         }
-    };
-
-    s
+    }
 }
 
 fn init_once() -> Settings {

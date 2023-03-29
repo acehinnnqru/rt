@@ -2,7 +2,7 @@
 name = "agrm"
 version = "0.1.0"
 edition = "2021"
-description = "A git repositories manager for local usage."
+description = "A Git Repositories Manager."
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
