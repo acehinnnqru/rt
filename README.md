@@ -1,7 +1,11 @@
 # agrm
 A git repositories manager for local usage.
 
+We don't want to create a new `git` or anything. We wrap it and manage the local repositories you have cloned.
+
 ## Features
+
+As we expect, this tool will provide these features:
 
 - [ ] git sources management
     - [ ] github
@@ -12,13 +16,14 @@ A git repositories manager for local usage.
     - [ ] auto management
 - [ ] git repositories management
     - [ ] clone management
+        - [ ] support different destinations including user provided targets or default targets(preset)
         - [ ] manage as a tree
         - [ ] support user custom structures
     - [ ] list cloned repositories
     - [ ] remove cloned repositories (!warning operation)
     - [ ] migrate existing repositories
     - [ ] view updates of cloned repositories
-        - [ ] support simple git pull
+        - [ ] support original git pull
 - [ ] git repositories explore
     - [ ] view trending projects
 - [ ] other features
@@ -32,5 +37,5 @@ A git repositories manager for local usage.
 
 ## Contributing
 
-Welcome to contribute if you have any idaes, issues, and stuff.
+Welcome to contribute if you have any ideas, issues, and stuff.
 
