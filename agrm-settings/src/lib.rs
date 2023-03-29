@@ -19,7 +19,7 @@ impl Settings {
         Self::build_from(configs)
     }
 
-    pub fn from_file(path: &String) -> Result<Settings, SettingsError> {
+    pub fn from_file(path: &str) -> Result<Settings, SettingsError> {
         let s = config::Config::builder().add_source(config::File::with_name(path));
         match s.build() {
             Err(e) => Err(e),
