@@ -12,3 +12,4 @@ agrm-cmd = { version = "0.1.0", path = "agrm-cmd" }
 config = "0.13.3"
 serde = { version = "1.0.152", features = ["derive"] }
 agrm-settings = { version = "0.1.0", path = "agrm-settings" }
+agrm-cache = { version = "0.1.0", path = "agrm-cache" }

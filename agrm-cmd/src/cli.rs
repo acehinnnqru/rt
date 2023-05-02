@@ -10,6 +10,12 @@ pub struct Cli {
     command: Option<Commands>,
 }
 
+impl Default for Cli {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Cli {
     pub fn new() -> Self {
         match Self::try_parse() {
