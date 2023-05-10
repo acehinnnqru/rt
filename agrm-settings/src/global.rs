@@ -1,7 +1,7 @@
 use crate::AGRM_NAME;
 use serde::Deserialize;
 
-#[derive(Deserialize, Debug, PartialEq, Eq)]
+#[derive(Deserialize, Debug, PartialEq, Eq, Hash, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum StructureNode {
     OSUser,
@@ -16,6 +16,15 @@ pub enum StructureNode {
 pub struct GlobalSettings {
     pub structure: Option<Vec<StructureNode>>,
     pub root: Option<String>,
+}
+
+impl Clone for GlobalSettings {
+    fn clone(&self) -> Self {
+        Self {
+            structure: self.structure.clone(),
+            root: self.root.clone(),
+        }
+    }
 }
 
 #[cfg(target_family = "windows")]
@@ -43,5 +52,15 @@ impl Default for GlobalSettings {
             root: Some(os_default_root()),
             structure: Some(vec![Platform, NameSpace, Name]),
         }
+    }
+}
+
+impl GlobalSettings {
+    pub fn merge(mut self, target: Option<GlobalSettings>) -> GlobalSettings {
+        if let Some(target) = target {
+            self.structure = self.structure.or(target.structure);
+            self.root = self.root.or(target.root);
+        }
+        self
     }
 }
