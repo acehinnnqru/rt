@@ -33,8 +33,9 @@ pub fn run(_setting: &Settings, args: CloneArgs) -> ! {
                     .join(repo.get_namespace())
                     .join(repo.get_name());
 
+                println!("Cloning {} into {}", repo.get_https_url(), target_path.display());
                 if let Err(e) = agrm_core::git::clone_default_branch(
-                    repo.get_ssh_url().as_str(),
+                    repo.get_https_url().as_str(),
                     target_path.as_path().to_str().unwrap(),
                 ) {
                     eprintln!("{}", e);

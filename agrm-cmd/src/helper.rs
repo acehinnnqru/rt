@@ -35,7 +35,7 @@ impl Repository {
     }
 
     pub fn get_https_url(&self) -> String {
-        format!("https://{}/{}", self.get_host(), self.get_full_name())
+        format!("https://{}", self.get_full_name_with_host())
     }
 }
 
@@ -62,8 +62,10 @@ pub fn parse_repository(repo: String) -> Option<Repository> {
 
 fn parse_ssh_format(repo: &str) -> Option<Repository> {
     let mut split = repo.split('@');
-    let host = split.next().unwrap();
+    let _ = split.next().unwrap();
     let mut split = split.next().unwrap().split(':');
+    let host = split.next().unwrap();
+    let mut split = split.next().unwrap().split('/');
     let namespace = split.next().unwrap();
     let name = split.next().unwrap();
     Some(Repository {
