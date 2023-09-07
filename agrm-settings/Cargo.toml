@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 config = "0.13.3"
-serde = "1.0.157"
+serde = "1.0.188"
