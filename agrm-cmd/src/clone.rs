@@ -24,6 +24,8 @@ pub fn run(_setting: &Settings, args: CloneArgs) -> ! {
 
     let mut handles = vec![];
 
+    // TODO: Add a progress bar
+    // TODO: Add existing repos check
     repos.into_iter().for_each(|repo| {
         let global_root = global_root.clone();
         let handle = thread::spawn(move || {
