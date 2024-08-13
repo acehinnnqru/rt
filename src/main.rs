@@ -1,5 +1,3 @@
-mod agrm;
-
 fn main() {
-    agrm::main()
+    println!("Hello, world!");
 }
