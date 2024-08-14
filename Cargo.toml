@@ -8,4 +8,5 @@ edition = "2021"
 [dependencies]
 regex = "1.10.6"
 serde = { version = "1.0.207", features = ["derive"] }
+tempdir = "0.3.7"
 toml = "0.8.19"
