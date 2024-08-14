@@ -5,9 +5,14 @@ A Git Repositories Manager
 `agrm` will clone a bare repository into a directory which named as `{root}/{git platform}/{namespace}/{name}/.bare`.
 
 The params in the directory name:
+
 - `root` is the root from config file `{$HOME}/.agrm.toml`
 - `git platform` means the target platform in the provided repository url/ssh.
 - `namespace` and `name` are also extract from the provided repository url/ssh.
+
+## Why clone in this way?
+
+To save the `git worktree` usage.
 
 ## Integrations
 
