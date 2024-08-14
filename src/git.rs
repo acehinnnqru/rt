@@ -1,26 +1,9 @@
-use std::{path::Path, process::Command};
+use std::path::Path;
 
 pub fn clone_bare(ssh: &str, target: &Path) {
     let cmd_str = format!("git clone --bare {} {}", ssh, target.to_str().unwrap());
 
-    let output = if cfg!(target_os = "windows") {
-        Command::new("cmd")
-            .args(["/C", cmd_str.as_str()])
-            .output()
-            .expect("failed to execute clone process")
-    } else {
-        Command::new("sh")
-            .arg("-c")
-            .arg(cmd_str)
-            .output()
-            .expect("failed to execute clone process")
-    };
-
-    println!();
-    println!("stdout:");
-    println!("{}", String::from_utf8_lossy(&output.stdout));
-    println!("stderr:");
-    println!("{}", String::from_utf8_lossy(&output.stderr));
+    crate::cmd::exec_stream(&cmd_str)
 }
 
 #[cfg(test)]
