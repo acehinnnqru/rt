@@ -3,8 +3,10 @@ use std::{path::Path, str::FromStr};
 mod repository;
 use repository::Repository;
 
-mod git;
+mod cmd;
 mod config;
+mod git;
+mod integrations;
 
 fn main() {
     let path = std::env::args().nth(1).expect("no repository given");
@@ -32,7 +34,11 @@ fn main() {
 
     git::clone_bare(&ssh, &target_dir.join(".bare"));
 
-    write_dot_git(&target_dir, "gitdir: ./.bare")
+    write_dot_git(&target_dir, "gitdir: ./.bare");
+
+    if config::integrations::zoxide_enabled() {
+        integrations::zoxide(&target_dir);
+    }
 }
 
 fn write_dot_git(dir: &Path, content: &str) {
