@@ -1,39 +1,37 @@
 # agrm
-A git repositories manager for local usage.
 
-We don't want to create a new `git` or anything. We wrap it and manage the local repositories you have cloned.
+A Git Repositories Manager
 
-## Features
+`agrm` will clone a bare repository into a directory which named as `{root}/{git platform}/{namespace}/{name}/.bare`.
 
-As we expect, this tool will provide these features:
+The params in the directory name:
+- `root` is the root from config file `{$HOME}/.agrm.toml`
+- `git platform` means the target platform in the provided repository url/ssh.
+- `namespace` and `name` are also extract from the provided repository url/ssh.
 
-- [ ] git sources management
-    - [ ] github
-    - [ ] gitlab
-    - [ ] custom self-hosted git
-- [ ] git config management
-    - [ ] separate configs for different sources
-    - [ ] auto management
-- [ ] git repositories management
-    - [ ] clone management
-        - [ ] support different destinations including user provided targets or default targets(preset)
-        - [ ] manage as a tree
-        - [ ] support user custom structures
-    - [ ] list cloned repositories
-    - [ ] remove cloned repositories (!warning operation)
-    - [ ] migrate existing repositories
-    - [ ] view updates of cloned repositories
-        - [ ] support original git pull
-- [ ] git repositories explore
-    - [ ] view trending projects
-- [ ] other features
-    - [ ] integrate with lazygit or stuff
+## Integrations
 
-## Support
+- `zoxide`: `agrm` will automatically add the cloned path to the `zoxide` database.
 
-- [ ] MacOS 
-- [ ] Linux
-- [ ] Windows
+## Default Config
+
+### For unix-like os
+
+```toml
+root = "{$HOME}/agrm"
+
+[integrations]
+zoxide = true
+```
+
+### For windows
+
+```toml
+root = "{$USERPROFILE}/agrm"
+
+[integrations]
+zoxide = true
+```
 
 ## Contributing
 
