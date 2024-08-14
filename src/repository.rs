@@ -4,9 +4,9 @@ use regex::Regex;
 
 #[derive(Debug)]
 pub struct Repository {
-    platform: String,
-    namespace: String,
-    name: String,
+    pub platform: String,
+    pub namespace: String,
+    pub name: String,
 }
 
 impl Repository {
