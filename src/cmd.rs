@@ -1,21 +1,20 @@
-use std::process::{Command, Stdio};
+use std::process::Command;
 
 pub fn exec_stream(cmd_str: &str) {
     let mut cmd = if cfg!(target_os = "windows") {
-        Command::new("cmd")
-            .args(["/C", cmd_str])
-            .stdout(Stdio::inherit())
-            .stderr(Stdio::inherit())
-            .spawn()
-            .unwrap()
+        let mut cmd = Command::new("cmd");
+        cmd.arg("/C").arg(cmd_str);
+        cmd
     } else {
-        Command::new("sh")
-            .arg("-c")
-            .arg(cmd_str)
-            .stdout(Stdio::piped())
-            .spawn()
-            .unwrap()
+        let mut cmd = Command::new("sh");
+        cmd.arg("-c").arg(cmd_str);
+        cmd
     };
 
-    cmd.wait().unwrap();
+    match cmd.spawn() {
+        Ok(mut p) => p.wait().map(|status| if !status.success() {
+            panic!("\nexit error:\n {}", status);
+        }).unwrap(),
+        Err(err) => panic!("{}", err),
+    };
 }
