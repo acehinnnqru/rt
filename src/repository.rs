@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use regex::Regex;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Repository {
     pub platform: String,
     pub namespace: String,
@@ -19,23 +19,18 @@ impl Repository {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-pub struct ParseRepositoryError;
-
-impl FromStr for Repository {
-    type Err = ParseRepositoryError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+impl From<String> for Repository {
+    fn from(s: String) -> Self {
         let mut pattern = Regex::new(r"git@(.*):(.*)/(.*).git").unwrap();
-        if !pattern.is_match(s) {
+        if !pattern.is_match(&s) {
             pattern = Regex::new(r"http[s]?://(.*)/(.*)/(.*).git").unwrap();
-            if !pattern.is_match(s) {
+            if !pattern.is_match(&s) {
                 unreachable!("invalid format of repository")
             }
         }
 
-        let (_, [platform, namespace, name]) = pattern.captures(s).unwrap().extract();
+        let (_, [platform, namespace, name]) = pattern.captures(&s).unwrap().extract();
 
-        Ok(Repository::new(platform, namespace, name))
+        Repository::new(platform, namespace, name)
     }
 }

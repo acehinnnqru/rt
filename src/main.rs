@@ -1,6 +1,7 @@
-use std::{path::Path, str::FromStr};
+use std::path::Path;
 
 mod repository;
+use clap::Parser;
 use repository::Repository;
 
 mod cmd;
@@ -8,31 +9,31 @@ mod config;
 mod git;
 mod integrations;
 
-fn help() {
-    let usage = "
-    agrm {{repository url/ssh}}
+fn long_about() -> String {
+    "
+`agrm` will clone a bare repository into a directory which named as `{{root}}/{{git platform}}/{{namespace}}/{{name}}/.bare`.
 
-        `agrm` will clone a bare repository into a directory which named as `{{root}}/{{git platform}}/{{namespace}}/{{name}}/.bare`.
+The params in the directory name:
 
-        The params in the directory name:
+- `root` is the root from config file `{{$HOME}}/.agrm.toml`
+- `git platform` means the target platform in the provided repository url/ssh.
+- `namespace` and `name` are also extract from the provided repository url/ssh.".to_string()
+}
 
-        - `root` is the root from config file `{{$HOME}}/.agrm.toml`
-        - `git platform` means the target platform in the provided repository url/ssh.
-        - `namespace` and `name` are also extract from the provided repository url/ssh.
-    ";
-
-    println!("{}", usage);
+#[derive(clap::Parser)]
+#[command(name = "agrm")]
+#[command(bin_name = "agrm")]
+#[command(version)]
+#[command(about, long_about = long_about())]
+struct Args {
+    #[arg(value_parser = clap::value_parser!(Repository))]
+    repository: Repository,
 }
 
 fn main() {
-    let path = std::env::args().nth(1).expect("no repository given");
+    let args = Args::parse();
 
-    if path.trim() == "--help" {
-        help();
-        return;
-    }
-
-    let repo = Repository::from_str(&path).unwrap();
+    let repo = args.repository;
 
     println!("\nparsed repository: {:?}", repo);
 
