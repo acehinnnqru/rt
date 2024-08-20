@@ -17,6 +17,10 @@ impl Repository {
             name: String::from_str(name).unwrap(),
         }
     }
+
+    pub fn ssh(self) -> String {
+        format!("git@{}:{}/{}", self.platform, self.namespace, self.name)
+    }
 }
 
 impl From<String> for Repository {
