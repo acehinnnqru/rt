@@ -1,6 +1,7 @@
+use crate::consts::AGRM;
 use std::{path::Path, sync::OnceLock};
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 struct Config {
     #[serde(default = "default_root_dir")]
     root: String,
@@ -9,8 +10,17 @@ struct Config {
     integrations: Integrations,
 }
 
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            root: default_root_dir(),
+            integrations: Integrations::default(),
+        }
+    }
+}
+
 fn default_root_dir() -> String {
-    String::from(Path::new(&homedir()).join("agrm").to_str().unwrap())
+    String::from(Path::new(&homedir()).join(AGRM).to_str().unwrap())
 }
 
 impl Config {
@@ -24,11 +34,11 @@ impl Config {
     }
 }
 
-pub fn init() {
-    CONFIG.get_or_init(Config::new);
+fn config() -> &'static Config {
+    CONFIG.get_or_init(Config::new)
 }
 
-#[derive(serde::Deserialize)]
+#[derive(serde::Deserialize, serde::Serialize)]
 struct Integrations {
     zoxide: bool,
 }
@@ -52,13 +62,11 @@ fn homedir() -> String {
 }
 
 pub fn root() -> String {
-    CONFIG.get().unwrap().root.clone()
+    config().root.clone()
 }
 
 pub mod integrations {
-    use super::CONFIG;
-
     pub fn zoxide_enabled() -> bool {
-        CONFIG.get().unwrap().integrations.zoxide
+        super::config().integrations.zoxide
     }
 }

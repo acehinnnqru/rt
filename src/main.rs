@@ -6,23 +6,24 @@ use repository::Repository;
 
 mod cmd;
 mod config;
+mod consts;
 mod git;
 mod integrations;
 
 fn long_about() -> String {
     "
-`agrm` will clone a bare repository into a directory which named as `{{root}}/{{git platform}}/{{namespace}}/{{name}}/.bare`.
+`agrm` will clone a bare repository into a directory which named as `{root}/{git platform}/{namespace}/{name}/.bare`.
 
 The params in the directory name:
 
-- `root` is the root from config file `{{$HOME}}/.agrm.toml`
+- `root` is the root from config file `{$HOME}/.agrm.toml`
 - `git platform` means the target platform in the provided repository url/ssh.
 - `namespace` and `name` are also extract from the provided repository url/ssh.".to_string()
 }
 
 #[derive(clap::Parser)]
-#[command(name = "agrm")]
-#[command(bin_name = "agrm")]
+#[command(name = consts::AGRM)]
+#[command(bin_name = consts::AGRM)]
 #[command(version)]
 #[command(about, long_about = long_about())]
 struct Args {
@@ -37,9 +38,9 @@ fn main() {
 
     println!("\nparsed repository: {:?}", repo);
 
-    config::init();
-
     let root = config::root();
+
+    println!("{:?}", config::root());
 
     if root.trim().is_empty() {
         unreachable!("\ninvalide root setting")
