@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::{config, consts::AGRM, git, integrations, repository::Repository};
+use clap::CommandFactory;
 
 fn long_about() -> String {
     "
@@ -19,25 +20,49 @@ The params in the directory name:
 #[command(version)]
 #[command(about, long_about = long_about())]
 pub struct Args {
-    #[arg(value_parser = clap::value_parser!(Repository))]
-    pub repository: Repository,
+    #[command(subcommand)]
+    command: Commands,
+}
+
+#[derive(Debug, clap::Subcommand)]
+enum Commands {
+    #[command(alias = "c")]
+    Clone {
+        #[arg(value_parser = clap::value_parser!(Repository))]
+        repo: Repository,
+    },
+    #[command(alias = "v")]
+    Version,
+    #[command(alias = "conf")]
+    Config,
 }
 
 pub fn main(args: Args) {
-    let root = config::root();
+    match args.command {
+        Commands::Clone { repo } => {
+            println!("{:?}", config::config());
 
-    println!("{:?}", config::root());
+            println!("\nparsed repository: {:?}", repo);
 
-    if root.trim().is_empty() {
-        unreachable!("\ninvalide root setting")
+            if config::root().trim().is_empty() {
+                unreachable!("\ninvalide root setting")
+            }
+
+            clone(config::root(), &repo)
+        }
+        Commands::Version => {
+            println!("agrm version: {}", Args::command().get_version().unwrap());
+        }
+        Commands::Config => print_config(),
     }
+}
 
-    println!("\nroot: {}\n", root);
+fn print_config() {
+    println!("agrm config:");
+    println!("{:?}", config::config());
+}
 
-    let repo = args.repository;
-
-    println!("\nparsed repository: {:?}", repo);
-
+fn clone(root: &str, repo: &Repository) {
     let target_dir = Path::new(&root)
         .join(&repo.platform)
         .join(&repo.namespace)

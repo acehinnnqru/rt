@@ -1,8 +1,11 @@
 use crate::consts::AGRM;
-use std::{path::Path, sync::OnceLock};
+use std::{
+    path::{Path, PathBuf},
+    sync::OnceLock,
+};
 
-#[derive(serde::Deserialize, serde::Serialize)]
-struct Config {
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
+pub struct Config {
     #[serde(default = "default_root_dir")]
     root: String,
 
@@ -23,22 +26,41 @@ fn default_root_dir() -> String {
     String::from(Path::new(&homedir()).join(AGRM).to_str().unwrap())
 }
 
+fn read_config_file_in_queue(queue: Vec<PathBuf>) -> Config {
+    let files = queue
+        .iter()
+        .filter(|path| path.exists())
+        .collect::<Vec<&PathBuf>>();
+
+    if files.is_empty() {
+        return Config::default();
+    }
+
+    read_config_file(files[0])
+}
+
+fn read_config_file(filepath: &PathBuf) -> Config {
+    println!("reading config file: {}", filepath.to_str().unwrap());
+    let content = std::fs::read(filepath).unwrap();
+    let conf: Config = toml::from_str(std::str::from_utf8(&content).unwrap()).unwrap();
+
+    conf
+}
+
 impl Config {
     fn new() -> Self {
-        let filepath = Path::new(&homedir()).join(".agrm.toml");
-        println!("reading config file: {}", filepath.to_str().unwrap());
-        let content = std::fs::read(&filepath).unwrap();
-        let conf: Config = toml::from_str(std::str::from_utf8(&content).unwrap()).unwrap();
-
-        conf
+        read_config_file_in_queue(vec![
+            Path::new(".").join(".agrm.toml"),
+            Path::new(&homedir()).join(".agrm.toml"),
+        ])
     }
 }
 
-fn config() -> &'static Config {
+pub fn config() -> &'static Config {
     CONFIG.get_or_init(Config::new)
 }
 
-#[derive(serde::Deserialize, serde::Serialize)]
+#[derive(serde::Deserialize, serde::Serialize, Debug)]
 struct Integrations {
     zoxide: bool,
 }
@@ -61,8 +83,8 @@ fn homedir() -> String {
     std::env::var("HOME").unwrap()
 }
 
-pub fn root() -> String {
-    config().root.clone()
+pub fn root() -> &'static str {
+    &config().root
 }
 
 pub mod integrations {

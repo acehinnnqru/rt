@@ -18,7 +18,7 @@ impl Repository {
         }
     }
 
-    pub fn ssh(self) -> String {
+    pub fn ssh(&self) -> String {
         format!("git@{}:{}/{}", self.platform, self.namespace, self.name)
     }
 }
