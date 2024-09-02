@@ -3,7 +3,7 @@ use std::path::Path;
 pub fn clone_bare(ssh: &str, target: &Path) {
     let cmd_str = format!("git clone --bare {} {}", ssh, target.to_str().unwrap());
 
-    crate::cmd::exec_stream(&cmd_str)
+    crate::exec::cmd_stream(&cmd_str)
 }
 
 #[cfg(test)]

@@ -5,6 +5,7 @@ mod cli;
 mod cmd;
 mod config;
 mod consts;
+mod exec;
 mod git;
 mod integrations;
 

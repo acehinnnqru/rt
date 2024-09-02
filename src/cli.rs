@@ -1,6 +1,4 @@
-use std::path::Path;
-
-use crate::{config, consts::AGRM, git, integrations, repository::Repository};
+use crate::{cmd, config, consts::AGRM, repository::Repository};
 use clap::CommandFactory;
 
 fn long_about() -> String {
@@ -48,50 +46,11 @@ pub fn main(args: Args) {
                 unreachable!("\ninvalide root setting")
             }
 
-            clone(config::root(), &repo)
+            cmd::clone(config::root(), &repo)
         }
         Commands::Version => {
             println!("agrm version: {}", Args::command().get_version().unwrap());
         }
-        Commands::Config => print_config(),
+        Commands::Config => cmd::print_config(),
     }
-}
-
-fn print_config() {
-    println!("agrm config:");
-    println!("{:?}", config::config());
-}
-
-fn clone(root: &str, repo: &Repository) {
-    let target_dir = Path::new(&root)
-        .join(&repo.platform)
-        .join(&repo.namespace)
-        .join(&repo.name);
-
-    let target_bare_dir = target_dir.join(".bare");
-
-    println!(
-        "\ntrying to clone into: {}\n",
-        target_bare_dir.to_str().unwrap()
-    );
-
-    let repo_ssh = repo.ssh();
-    git::clone_bare(&repo_ssh, &target_bare_dir);
-
-    println!(
-        "\ncloned {} into {}",
-        repo_ssh,
-        target_bare_dir.to_str().unwrap()
-    );
-
-    write_dot_git(&target_dir, "gitdir: ./.bare");
-    println!("\nwrote stuff to {}/.git", target_dir.to_str().unwrap());
-
-    if config::integrations::zoxide_enabled() {
-        integrations::zoxide(&target_dir);
-    }
-}
-
-fn write_dot_git(dir: &Path, content: &str) {
-    std::fs::write(dir.join(".git"), content).unwrap();
 }
