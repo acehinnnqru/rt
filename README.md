@@ -1,6 +1,6 @@
 # rt
 
-A Git Repositories Manager manages all repos as a tree. So it names `repo tree` = `rt`.
+A Git Repositories Manager manages all repos as a tree. So it names **`r`**`epo` **`t`**`ree` = **`rt`**.
 
 Considering a git url like `git@github.com:acehinnnqru/rt.git`, it would be clone into dir `{config root}/github.com/acehinnnqru/rt`.
 
