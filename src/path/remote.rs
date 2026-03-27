@@ -116,59 +116,81 @@ mod tests {
     }
 
     #[test]
-    fn parse_ssh_url() {
-        let r = Remote::parse("git@github.com:acehinnnqru/rt.git").unwrap();
-        assert_eq!(r.host, "github.com");
-        assert_eq!(r.namespace, ns(&["acehinnnqru"]));
-        assert_eq!(r.repo, "rt");
-    }
+    fn parse_url() {
+        struct Case {
+            name: &'static str,
+            input: &'static str,
+            host: &'static str,
+            namespace: Namespace,
+            repo: &'static str,
+        }
 
-    #[test]
-    fn parse_https_url() {
-        let r = Remote::parse("https://github.com/acehinnnqru/rt.git").unwrap();
-        assert_eq!(r.host, "github.com");
-        assert_eq!(r.namespace, ns(&["acehinnnqru"]));
-        assert_eq!(r.repo, "rt");
-    }
+        let cases = vec![
+            Case {
+                name: "ssh",
+                input: "git@github.com:acehinnnqru/rt.git",
+                host: "github.com",
+                namespace: ns(&["acehinnnqru"]),
+                repo: "rt",
+            },
+            Case {
+                name: "https",
+                input: "https://github.com/acehinnnqru/rt.git",
+                host: "github.com",
+                namespace: ns(&["acehinnnqru"]),
+                repo: "rt",
+            },
+            Case {
+                name: "https without owner",
+                input: "https://go.googlesource.com/arch",
+                host: "go.googlesource.com",
+                namespace: Namespace::default(),
+                repo: "arch",
+            },
+            Case {
+                name: "short",
+                input: "github.com/acehinnnqru/rt",
+                host: "github.com",
+                namespace: ns(&["acehinnnqru"]),
+                repo: "rt",
+            },
+            Case {
+                name: "short without owner",
+                input: "go.googlesource.com/arch",
+                host: "go.googlesource.com",
+                namespace: Namespace::default(),
+                repo: "arch",
+            },
+            Case {
+                name: "nested owner",
+                input: "https://gitlab.com/groups/subgroups/name.git",
+                host: "gitlab.com",
+                namespace: ns(&["groups", "subgroups"]),
+                repo: "name",
+            },
+            Case {
+                name: "ssh scheme with port and nested owner",
+                input: "ssh://git@gitlab.com:909/groups/subgroups/subgroups/name.git",
+                host: "gitlab.com:909",
+                namespace: ns(&["groups", "subgroups", "subgroups"]),
+                repo: "name",
+            },
+            Case {
+                name: "https scheme with port and nested owner",
+                input: "https://gitlab.com:909/groups/subgroups/subgroups/name.git",
+                host: "gitlab.com:909",
+                namespace: ns(&["groups", "subgroups", "subgroups"]),
+                repo: "name",
+            }
+        ];
 
-    #[test]
-    fn parse_https_url_without_owner() {
-        let r = Remote::parse("https://go.googlesource.com/arch").unwrap();
-        assert_eq!(r.host, "go.googlesource.com");
-        assert_eq!(r.namespace, Namespace::default());
-        assert_eq!(r.repo, "arch");
-    }
-
-    #[test]
-    fn parse_short_url() {
-        let r = Remote::parse("github.com/acehinnnqru/rt").unwrap();
-        assert_eq!(r.host, "github.com");
-        assert_eq!(r.namespace, ns(&["acehinnnqru"]));
-        assert_eq!(r.repo, "rt");
-    }
-
-    #[test]
-    fn parse_short_url_without_owner() {
-        let r = Remote::parse("go.googlesource.com/arch").unwrap();
-        assert_eq!(r.host, "go.googlesource.com");
-        assert_eq!(r.namespace, Namespace::default());
-        assert_eq!(r.repo, "arch");
-    }
-
-    #[test]
-    fn parse_nested_owner_url() {
-        let r = Remote::parse("https://gitlab.com/groups/subgroups/name.git").unwrap();
-        assert_eq!(r.host, "gitlab.com");
-        assert_eq!(r.namespace, ns(&["groups", "subgroups"]));
-        assert_eq!(r.repo, "name");
-    }
-
-    #[test]
-    fn parse_ssh_scheme_with_port_and_nested_owner() {
-        let r =
-            Remote::parse("ssh://git@gitlab.com:909/groups/subgroups/subgroups/name.git").unwrap();
-        assert_eq!(r.host, "gitlab.com:909");
-        assert_eq!(r.namespace, ns(&["groups", "subgroups", "subgroups"]));
-        assert_eq!(r.repo, "name");
+        for case in cases {
+            let r = Remote::parse(case.input).unwrap_or_else(|err| {
+                panic!("case `{}` failed to parse `{}`: {err}", case.name, case.input)
+            });
+            assert_eq!(r.host, case.host, "case `{}`", case.name);
+            assert_eq!(r.namespace, case.namespace, "case `{}`", case.name);
+            assert_eq!(r.repo, case.repo, "case `{}`", case.name);
+        }
     }
 }
