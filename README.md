@@ -1,22 +1,36 @@
 # rt
 
-A Git Repositories Manager manages all repos as a tree. So it names **`r`**`epo` **`t`**`ree` = **`rt`**.
+`rt` means **repo tree**: a Git repository manager that stores repositories in a predictable directory tree derived from remote URLs.
 
-Considering a git url like `git@github.com:acehinnnqru/rt.git`, it would be clone into dir `{config root}/github.com/acehinnnqru/rt`.
+## What problem it solves
 
-The params in the directory name:
+Instead of cloning repositories into random locations, `rt` maps each Git remote to a stable path under one root directory.
 
-- `config root` is the root set in config file `{$HOME}/.rt.toml`.
-- `depth` is the depth of the cloned repos.
+Example:
 
-## Integrations
+- Remote: `git@github.com:acehinnnqru/rt.git`
+- Local path: `{root}/github.com/acehinnnqru/rt`
 
-- `zoxide`: automatically add the cloned path to the `zoxide` database.
-- `autojump`: automatically add the cloned path to the `autojump` database.
+This structure makes repositories easy to find, script against, and navigate.
 
-## Default Config
+## Path mapping rule
 
-### For unix-like os
+Given a Git remote URL, `rt` computes the destination path as:
+
+`{root}/{host}/{owner}/{repo}`
+
+Where:
+
+- `root` is configured in `~/.rt.toml`
+- `host` is the Git host (for example `github.com`)
+- `owner` is the namespace/user/org
+- `repo` is the repository name without `.git`
+
+## Configuration
+
+Configuration file: `~/.rt.toml`
+
+Default config (Unix-like systems):
 
 ```toml
 root = "{$HOME}/r"
@@ -26,31 +40,46 @@ depth = 1
 
 [integrations]
 zoxide = true
+autojump = false
 ```
+
+### Config keys
+
+- `root` (string): base directory for all managed repositories.
+- `clone.depth` (integer): shallow clone depth used during clone operations.
+- `integrations.zoxide` (bool): when `true`, add cloned paths to `zoxide`.
+- `integrations.autojump` (bool): when `true`, add cloned paths to `autojump`.
 
 ## Commands
 
-- `rt clone`: alias `c` to clone repos.
-- `rt delete`: alias `d` to delete repos. 
-- `rt tree`: alias `t` to show repos tree under `{config root}`.
-- `rt help`: show help.
+### Core commands
 
-### For `git worktree` support
+- `rt clone` (alias: `c`): clone a repository into the computed tree path.
+- `rt delete` (alias: `d`): delete a managed repository.
+- `rt tree` (alias: `t`): print the repository tree under `root`.
+- `rt help`: show command help.
 
-`rt worktree`: alias `wt` is the subgroup command for `git worktree`.
+### Worktree commands
 
-- `rt worktree add`: alias `wt a` or `wa` to add a new worktree.
-- `rt worktree list`: alias `wt l` or `wl` to list all worktrees under the current repo.
-- `rt worktree delete`: alias `wt d` or `wd` to delete a worktree interactively under the current repo.
+`rt worktree` (alias: `wt`) is a command group for `git worktree`.
+
+- `rt worktree add` (aliases: `wt a`, `wa`): create a new worktree.
+- `rt worktree list` (aliases: `wt l`, `wl`): list worktrees for the current repository.
+- `rt worktree delete` (aliases: `wt d`, `wd`): interactively delete a worktree for the current repository.
+
+## Integrations
+
+- `zoxide`: automatically register cloned paths for faster directory jumping.
+- `autojump`: automatically register cloned paths for autojump navigation.
 
 ## Dependencies
 
-- `clap`: for command line parsing.
-- `tokio`: for asynchronous runtime.
-- `anyhow`: for error handling.
-- `serde`: for serialization and deserialization.
-- `serde_toml`: for TOML serialization and deserialization.
+- `clap`: CLI parsing.
+- `tokio`: async runtime.
+- `anyhow`: error handling.
+- `serde`: serialization/deserialization.
+- `toml`: TOML parsing and serialization.
 
 ## Contributing
 
-Welcome to contribute if you have any ideas, issues, and stuff.
+Contributions are welcome. Open an issue or pull request with ideas, bug reports, or improvements.
