@@ -1,0 +1,8 @@
+root = "{$HOME}/r"
+
+[clone]
+depth = 1
+
+[integrations]
+zoxide = true
+autojump = false
