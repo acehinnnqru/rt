@@ -1,1 +1,2 @@
-// Integrations module namespace.
+pub mod autojump;
+pub mod zoxide;
