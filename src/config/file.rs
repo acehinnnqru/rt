@@ -25,10 +25,8 @@ pub fn load() -> Result<Config> {
 }
 
 fn expand_root(root: &str) -> String {
-    if root.starts_with("~/") || root == "~" {
-        if let Some(home) = dirs::home_dir() {
-            return root.replacen("~", &home.to_string_lossy(), 1);
-        }
+    if (root.starts_with("~/") || root == "~") && let Some(home) = dirs::home_dir() {
+        return root.replacen("~", &home.to_string_lossy(), 1);
     }
     if let Ok(home) = std::env::var("HOME") {
         return root.replace("{$HOME}", &home).replace("$HOME", &home);
