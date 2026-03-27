@@ -6,7 +6,8 @@ Considering a git url like `git@github.com:acehinnnqru/rt.git`, it would be clon
 
 The params in the directory name:
 
-- `config root` is the root set in config file `{$HOME}/.agrm.toml`.
+- `config root` is the root set in config file `{$HOME}/.rt.toml`.
+- `depth` is the depth of the cloned repos.
 
 ## Integrations
 
@@ -18,11 +19,10 @@ The params in the directory name:
 ### For unix-like os
 
 ```toml
-root = "{$HOME}/rt"
+root = "{$HOME}/r"
 
 [clone]
 depth = 1
-bare = false
 
 [integrations]
 zoxide = true
@@ -30,10 +30,26 @@ zoxide = true
 
 ## Commands
 
-- `rt c`: clone repos.
-- `rt cb`: clone bare repos.
-- `rt d`: delete repos. 
-- `rt t`: show repos tree under `{config root}`.
+- `rt clone`: alias `c` to clone repos.
+- `rt delete`: alias `d` to delete repos. 
+- `rt tree`: alias `t` to show repos tree under `{config root}`.
+- `rt help`: show help.
+
+### For `git worktree` support
+
+`rt worktree`: alias `wt` is the subgroup command for `git worktree`.
+
+- `rt worktree add`: alias `wt a` or `wa` to add a new worktree.
+- `rt worktree list`: alias `wt l` or `wl` to list all worktrees under the current repo.
+- `rt worktree delete`: alias `wt d` or `wd` to delete a worktree interactively under the current repo.
+
+## Dependencies
+
+- `clap`: for command line parsing.
+- `tokio`: for asynchronous runtime.
+- `anyhow`: for error handling.
+- `serde`: for serialization and deserialization.
+- `serde_toml`: for TOML serialization and deserialization.
 
 ## Contributing
 
