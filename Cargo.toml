@@ -8,5 +8,6 @@ anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 dirs = "5"
 serde = { version = "1", features = ["derive"] }
+test-case = "3.3.1"
 tokio = { version = "1", features = ["full"] }
 toml = "0.8"

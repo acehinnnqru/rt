@@ -1,4 +1,4 @@
-use anyhow::{bail, Context, Result};
+use anyhow::{Context, Result, bail};
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Namespace(Vec<String>);
@@ -96,7 +96,10 @@ impl Remote {
 fn split_namespace_repo(path: &str) -> (Namespace, &str) {
     match path.rsplit_once('/') {
         Some((path, repo)) => (
-            path.split('/').map(ToOwned::to_owned).collect::<Vec<String>>().into(),
+            path.split('/')
+                .map(ToOwned::to_owned)
+                .collect::<Vec<String>>()
+                .into(),
             repo,
         ),
         None => (Namespace::default(), path),
@@ -106,6 +109,7 @@ fn split_namespace_repo(path: &str) -> (Namespace, &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_case::test_case;
 
     fn ns(parts: &[&str]) -> Namespace {
         parts
@@ -115,82 +119,24 @@ mod tests {
             .into()
     }
 
-    #[test]
-    fn parse_url() {
-        struct Case {
-            name: &'static str,
-            input: &'static str,
-            host: &'static str,
-            namespace: Namespace,
-            repo: &'static str,
-        }
-
-        let cases = vec![
-            Case {
-                name: "ssh",
-                input: "git@github.com:acehinnnqru/rt.git",
-                host: "github.com",
-                namespace: ns(&["acehinnnqru"]),
-                repo: "rt",
-            },
-            Case {
-                name: "https",
-                input: "https://github.com/acehinnnqru/rt.git",
-                host: "github.com",
-                namespace: ns(&["acehinnnqru"]),
-                repo: "rt",
-            },
-            Case {
-                name: "https without owner",
-                input: "https://go.googlesource.com/arch",
-                host: "go.googlesource.com",
-                namespace: Namespace::default(),
-                repo: "arch",
-            },
-            Case {
-                name: "short",
-                input: "github.com/acehinnnqru/rt",
-                host: "github.com",
-                namespace: ns(&["acehinnnqru"]),
-                repo: "rt",
-            },
-            Case {
-                name: "short without owner",
-                input: "go.googlesource.com/arch",
-                host: "go.googlesource.com",
-                namespace: Namespace::default(),
-                repo: "arch",
-            },
-            Case {
-                name: "nested owner",
-                input: "https://gitlab.com/groups/subgroups/name.git",
-                host: "gitlab.com",
-                namespace: ns(&["groups", "subgroups"]),
-                repo: "name",
-            },
-            Case {
-                name: "ssh scheme with port and nested owner",
-                input: "ssh://git@gitlab.com:909/groups/subgroups/subgroups/name.git",
-                host: "gitlab.com:909",
-                namespace: ns(&["groups", "subgroups", "subgroups"]),
-                repo: "name",
-            },
-            Case {
-                name: "https scheme with port and nested owner",
-                input: "https://gitlab.com:909/groups/subgroups/subgroups/name.git",
-                host: "gitlab.com:909",
-                namespace: ns(&["groups", "subgroups", "subgroups"]),
-                repo: "name",
-            }
-        ];
-
-        for case in cases {
-            let r = Remote::parse(case.input).unwrap_or_else(|err| {
-                panic!("case `{}` failed to parse `{}`: {err}", case.name, case.input)
-            });
-            assert_eq!(r.host, case.host, "case `{}`", case.name);
-            assert_eq!(r.namespace, case.namespace, "case `{}`", case.name);
-            assert_eq!(r.repo, case.repo, "case `{}`", case.name);
-        }
+    #[test_case("git@github.com:acehinnnqru/rt.git", "github.com", ns(&["acehinnnqru"]), "rt"; "ssh")]
+    #[test_case("https://github.com/acehinnnqru/rt.git", "github.com", ns(&["acehinnnqru"]), "rt"; "https")]
+    #[test_case("https://go.googlesource.com/arch", "go.googlesource.com", Namespace::default(), "arch"; "https without owner")]
+    #[test_case("github.com/acehinnnqru/rt", "github.com", ns(&["acehinnnqru"]), "rt"; "short")]
+    #[test_case("go.googlesource.com/arch", "go.googlesource.com", Namespace::default(), "arch"; "short without owner")]
+    #[test_case("https://gitlab.com/groups/subgroups/name.git", "gitlab.com", ns(&["groups", "subgroups"]), "name"; "nested owner")]
+    #[test_case("ssh://git@gitlab.com:909/groups/subgroups/subgroups/name.git", "gitlab.com:909", ns(&["groups", "subgroups", "subgroups"]), "name"; "ssh scheme with port and nested owner")]
+    #[test_case("https://gitlab.com:909/groups/subgroups/subgroups/name.git", "gitlab.com:909", ns(&["groups", "subgroups", "subgroups"]), "name"; "https scheme with port and nested owner")]
+    fn parse_url(
+        input: &'static str,
+        host: &'static str,
+        namespace: Namespace,
+        repo: &'static str,
+    ) {
+        let r =
+            Remote::parse(input).unwrap_or_else(|err| panic!("failed to parse `{}`: {err}", input));
+        assert_eq!(r.host, host);
+        assert_eq!(r.namespace, namespace);
+        assert_eq!(r.repo, repo);
     }
 }
