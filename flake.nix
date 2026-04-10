@@ -3,23 +3,30 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    flake-utils.url = "github:numtide/flake-utils";
-    devshells-rust.url = "github:acehinnnqru/devshells?dir=langs/rust/nightly";
-    devshells-nix.url = "github:acehinnnqru/devshells?dir=langs/nix";
+    flake-utils = {
+      url = "github:numtide/flake-utils";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    devshells-rust = {
+      url = "github:acehinnnqru/devshells?dir=langs/rust/nightly";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    devshells-nix = {
+      url = "github:acehinnnqru/devshells?dir=langs/nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs =
-    {
-      nixpkgs,
-      flake-utils,
-      devshells-rust,
-      devshells-nix,
-      ...
-    }:
+  outputs = {
+    nixpkgs,
+    flake-utils,
+    devshells-rust,
+    devshells-nix,
+    ...
+  }:
     flake-utils.lib.eachDefaultSystem (
-      system:
-      let
-        pkgs = import nixpkgs { inherit system; };
+      system: let
+        pkgs = import nixpkgs {inherit system;};
         rustDevShell = devshells-rust.devShells.${system}.default;
         nixDevShell = devshells-nix.devShells.${system}.default;
 
@@ -40,8 +47,7 @@
             mainProgram = "rt";
           };
         };
-      in
-      {
+      in {
         packages = {
           default = rt;
           rt = rt;
