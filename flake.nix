@@ -7,12 +7,8 @@
       url = "github:numtide/flake-utils";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    devshells-rust = {
-      url = "github:acehinnnqru/devshells?dir=langs/rust/nightly";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    devshells-nix = {
-      url = "github:acehinnnqru/devshells?dir=langs/nix";
+    devshells = {
+      url = "github:acehinnnqru/devshells";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -20,15 +16,12 @@
   outputs = {
     nixpkgs,
     flake-utils,
-    devshells-rust,
-    devshells-nix,
+    devshells,
     ...
   }:
     flake-utils.lib.eachDefaultSystem (
       system: let
         pkgs = import nixpkgs {inherit system;};
-        rustDevShell = devshells-rust.devShells.${system}.default;
-        nixDevShell = devshells-nix.devShells.${system}.default;
 
         rt = pkgs.rustPlatform.buildRustPackage {
           pname = "rt";
@@ -59,8 +52,8 @@
 
         devShells.default = pkgs.mkShell {
           inputsFrom = [
-            rustDevShell
-            nixDevShell
+            devshells.devShells.${system}."rust-nightly"
+            devshells.devShells.${system}.default
           ];
         };
       }
