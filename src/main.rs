@@ -1,7 +1,10 @@
 mod commands;
 mod config;
+mod git;
 mod integrations;
 mod path;
+#[cfg(test)]
+mod test_support;
 
 use anyhow::Result;
 use clap::{Parser, Subcommand};
@@ -20,6 +23,16 @@ enum Commands {
     Clone {
         /// Git remote URL
         url: String,
+        /// Clone as a bare repository with the default branch linked as a worktree
+        /// inside it (for example `A/main`); accepts an optional branch name
+        #[arg(
+            long,
+            short = 'w',
+            num_args = 0..=1,
+            require_equals = true,
+            default_missing_value = ""
+        )]
+        worktree: Option<String>,
     },
 
     /// Delete a managed repository
@@ -65,7 +78,9 @@ async fn main() -> Result<()> {
     let config = config::load()?;
 
     match cli.command {
-        Commands::Clone { url } => commands::clone::run(&config, &url).await,
+        Commands::Clone { url, worktree } => {
+            commands::clone::run(&config, &url, worktree.as_deref()).await
+        }
         Commands::Delete { repo } => commands::delete::run(&config, repo.as_deref()).await,
         Commands::Tree => commands::tree::run(&config).await,
         Commands::Worktree { command } => match command {
