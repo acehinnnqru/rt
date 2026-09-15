@@ -335,10 +335,20 @@ a `Drop` guard. Fixture commits need `-c user.email=... -c user.name=...
 | 8 | `rt clone <url>` without the flag still produces an ordinary clone | no regression |
 | 9 | With the default config (`clone.depth = 1`), `clone --worktree` still yields full history: `git -C A/<default> merge origin/<other>` succeeds | §4 (shallow history breaks cross-worktree merges) |
 
-Cases 1–3, 5 and the absolute-path rule of §3 step 9 were already executed by hand on git
-2.55.0 (§13); the tests turn those measurements into a permanent regression net. Unit tests in
-`src/commands/tree.rs` cover bare detection and the reserved-name list; the two existing
-pre-flight tests in `src/commands/clone.rs` keep passing unchanged.
+Implemented in `src/git.rs` (layout facts and command helpers), `src/commands/clone.rs`,
+`src/commands/tree.rs`, `src/commands/worktree/add.rs` and `src/commands/delete.rs`, with the
+integration suite in `tests/` (binary-only crate, so the tests drive `CARGO_BIN_EXE_rt`; see
+`tests/common/mod.rs` for the fixture). Unit tests cover bare detection, the reserved-name
+list and the clone pre-flight checks. The measurements from §13 are now assertions: cases 1–3
+and 9 in particular fail if git's behaviour ever changes underneath them.
+
+Two things the implementation added to the design, both found by the tests:
+
+- `git remote get-url` expands `url.*.insteadOf`, so a repository reached through a rewrite
+  resolves to a different path than the one `rt clone` mapped. `rt worktree add` reads
+  `git config --get remote.origin.url` instead (§7.2).
+- `git init` and `git worktree add` write progress to **stdout**, which would pollute the
+  scriptable path that `rt` prints; both run with `--quiet`.
 
 ## 12. Decisions and open questions
 
@@ -349,13 +359,15 @@ Decided:
   and every checkout is a linked worktree;
 - `--worktree` ignores `clone.depth` and fetches full history, warning once, because shallow
   history breaks merges between worktrees (§4);
+- §7.1 descends into a bare repository while skipping git's administrative entries, so `rt
+  tree` shows `A` with one child per worktree;
+- §7.3 removes a linked worktree with `git worktree remove`, which refuses unclean trees and
+  prunes the registration; naming the repository (path or URL) still deletes everything, and
+  an existing path is no longer mistaken for a remote URL;
 - this document first, implementation afterwards.
 
 Open:
 
-- §7.1 tree policy: descend into the bare directory while skipping git's administrative
-  entries (proposed) versus listing only the registered worktrees;
-- §7.3: `rt delete` with no argument inside a worktree — proposed `git worktree remove`;
 - whether `worktree.useRelativePaths` should be enabled for repositories under a movable
   `root`, given the git-version requirement;
 - whether the bare layout ever becomes a configuration default (§9);
@@ -385,5 +397,13 @@ common ancestor sits beyond a depth-1 boundary.
 | §4 a shallow repository never deepens by itself | plain `git fetch origin` after a new upstream commit | new tip fetched, `shallow` file still present, merge base still missing; `git pull --ff-only` in the worktree succeeds (exit 0) |
 | §4 the escape hatch works | `git fetch --unshallow origin`, then the same merge | full history restored, merge succeeds |
 
-Not executed: the `rt` side (nothing is implemented yet) and `worktree.useRelativePaths`
-(§12).
+Three further measurements came out of implementing the `rt` side, and each one is now covered
+by a test:
+
+| Claim | Command | Result |
+| --- | --- | --- |
+| `git remote get-url` rewrites URLs | with `url."git@example.com:".insteadOf` configured, `git remote get-url origin` | prints the rewritten `file://…` URL; `git config --get remote.origin.url` prints the configured one |
+| `git init` and `git worktree add` write progress to stdout | `git worktree add -b q1 <path> main`, with and without `--quiet` | without `--quiet`: `HEAD is now at …` on stdout; with it: stdout empty |
+| `git worktree remove` guards and prunes | remove a dirty worktree, then a clean one | dirty: `fatal: '…' contains modified or untracked files, use --force to delete it`; clean: directory gone and the `worktrees/<id>` entry pruned |
+
+Not executed: `worktree.useRelativePaths` (§12).

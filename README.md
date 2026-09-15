@@ -59,6 +59,32 @@ autojump = false
 - `rt tree` (alias: `t`): print the repository tree under `root`.
 - `rt help`: show command help.
 
+### One repository, one worktree per branch
+
+`rt clone --worktree` keeps a single object store per project and gives every branch its own
+checkout inside it:
+
+```sh
+rt clone --worktree git@github.com:owner/repo.git      # -> {root}/github.com/owner/repo/main
+rt clone --worktree=dev git@github.com:owner/repo.git  # -> {root}/github.com/owner/repo/dev
+```
+
+```
+{root}/github.com/owner/repo/            bare repository: HEAD, config, objects/, refs/, worktrees/
+{root}/github.com/owner/repo/main/       checkout of the default branch
+{root}/github.com/owner/repo/fix-login/  checkout of another branch
+```
+
+- the worktree is named after the remote's default branch (`main`, `master`, `trunk`, ...),
+  unless a branch is given with `--worktree=<branch>`;
+- `rt worktree add <branch>` run inside any of these checkouts creates the next one next to
+  it, and `rt delete` inside a checkout removes that worktree only (refusing to discard
+  uncommitted work);
+- `clone.depth` does not apply to `--worktree`: shallow history cannot merge branches that
+  diverged, which is the point of the layout.
+
+Plain `rt clone` is unchanged and still produces an ordinary clone at the mapped path.
+
 ### Worktree commands
 
 `rt worktree` (alias: `wt`) is a command group for `git worktree`.
