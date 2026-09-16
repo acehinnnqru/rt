@@ -1,6 +1,10 @@
 # Design: `rt clone --worktree` — bare repository with linked worktrees
 
-Status: draft (pending review)
+Status: implemented; kept as the original design draft and verification log. The current,
+consolidated description of `rt clone` is [`clone.md`](clone.md); the user-facing guide is
+[`../usage.md`](../usage.md). Where this document and the later
+[`worktree-commands.md`](worktree-commands.md) disagree — §7.2's repository resolution in
+particular — the later document is the implemented design.
 Scope: `rt clone`, `rt worktree *`, `rt tree`, `rt delete`
 
 ## 1. Motivation
@@ -301,7 +305,8 @@ No new keys in v1: `--worktree` is opt-in per invocation, so nothing changes for
 users and no `--no-worktree` counter-flag is needed. `clone.depth` keeps applying to ordinary
 clones and is overridden, with a warning, on the worktree path (§4). A future
 `[clone] worktree = true` (turning the bare layout into the default) is deliberately out of
-scope until the flag has seen use; README documents the flag when implemented.
+scope until the flag has seen use; `README.md` and [`../usage.md`](../usage.md) document the
+flag as implemented.
 
 ## 10. Compatibility
 

@@ -116,6 +116,16 @@ every worktree in it, while `rt delete` inside a linked worktree (like a plain
 - `serde`: serialization/deserialization.
 - `toml`: TOML parsing and serialization.
 
+## Documentation
+
+- [`docs/usage.md`](docs/usage.md) — the full user guide: configuration, path mapping,
+  every command, workflows, the stdout/stderr contract and troubleshooting.
+- [`docs/design/clone.md`](docs/design/clone.md) — why `rt clone` maps and builds
+  repositories the way it does.
+- [`docs/design/worktree-commands.md`](docs/design/worktree-commands.md) — the `rt worktree`
+  command group.
+- [`docs/README.md`](docs/README.md) — index of the above, and the conventions they use.
+
 ## Contributing
 
 Contributions are welcome. Open an issue or pull request with ideas, bug reports, or improvements.

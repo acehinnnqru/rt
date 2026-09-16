@@ -1,6 +1,8 @@
 # Design: `rt worktree` (alias `wt`) — the checkout commands
 
-Status: draft (pending review)
+Status: implemented; kept as the original design draft and verification log. The current
+description of `rt worktree` is this document; the user-facing guide is
+[`../usage.md`](../usage.md).
 Scope: `rt worktree` / `rt wt` and its interaction with `rt clone --worktree` and `rt delete`
 Revises: `docs/design/clone-worktree.md` §7.2 (how the owning repository is resolved), §7.3
 (`rt delete` keeps its meaning), §11 case list
