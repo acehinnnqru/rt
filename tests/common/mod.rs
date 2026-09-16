@@ -152,6 +152,12 @@ impl Fixture {
         self.root.join("example.com/acme/widget")
     }
 
+    /// Clones the fixture origin into the bare layout and returns the default worktree.
+    pub fn bare(&self) -> PathBuf {
+        self.rt_ok(&["clone", URL, "--worktree"]);
+        self.worktree("main")
+    }
+
     /// A worktree inside the bare repository.
     pub fn worktree(&self, branch: &str) -> PathBuf {
         self.repo().join(branch)
@@ -215,6 +221,23 @@ impl Fixture {
         git(&self.home, dir, args)
     }
 
+    /// Whether git inside the fixture succeeds, with its output discarded.
+    pub fn git_ok(&self, dir: &Path, args: &[&str]) -> bool {
+        git_output(&self.home, dir, args).status.success()
+    }
+
+    /// The commit `rev` resolves to inside `dir`, without the trailing newline.
+    pub fn rev(&self, dir: &Path, rev: &str) -> String {
+        self.git(dir, &["rev-parse", rev]).trim().to_string()
+    }
+
+    /// The short name `rev` resolves to inside `dir`, for example `dev` or `origin/dev`.
+    pub fn ref_name(&self, dir: &Path, rev: &str) -> String {
+        self.git(dir, &["rev-parse", "--abbrev-ref", rev])
+            .trim()
+            .to_string()
+    }
+
     /// Adds a commit to `main` upstream and pushes it, so the remote moves on.
     pub fn commit_upstream(&self, message: &str) {
         git(
@@ -234,6 +257,23 @@ impl Fixture {
         );
     }
 
+    /// Creates `name` upstream on top of `start` and pushes it: a branch that exists on the
+    /// remote but not yet in any clone of it.
+    pub fn publish_branch(&self, name: &str, start: &str) {
+        self.git(&self.work, &["switch", "-q", "-c", name, start]);
+        self.git(&self.work, &["commit", "-q", "--allow-empty", "-m", name]);
+        self.git(
+            &self.work,
+            &[
+                "push",
+                "-q",
+                self.origin.to_str().expect("origin path is UTF-8"),
+                name,
+            ],
+        );
+        self.git(&self.work, &["switch", "-q", "main"]);
+    }
+
     /// Directory names of every worktree git registers, the bare repository included.
     pub fn registered(&self) -> Vec<String> {
         self.git(&self.repo(), &["worktree", "list", "--porcelain"])
@@ -246,6 +286,15 @@ impl Fixture {
                     .to_string_lossy()
                     .into_owned()
             })
+            .collect()
+    }
+
+    /// Branch names git registers as worktrees, the bare repository excluded.
+    pub fn branches(&self) -> Vec<String> {
+        self.git(&self.repo(), &["worktree", "list", "--porcelain"])
+            .lines()
+            .filter_map(|line| line.strip_prefix("branch refs/heads/"))
+            .map(ToOwned::to_owned)
             .collect()
     }
 
@@ -274,13 +323,27 @@ pub fn assert_same_path(printed: &str, expected: &Path) {
     assert_eq!(printed, expected);
 }
 
-fn canonical(path: &Path) -> PathBuf {
+/// `path` with symlinks resolved, as git spells the paths it reports.
+pub fn canonical(path: &Path) -> PathBuf {
     std::fs::canonicalize(path).unwrap_or_else(|err| panic!("{}: {err}", path.display()))
 }
 
 /// Runs git hermetically: the fixture home, a fixed identity and no commit signing.
 fn git(home: &Path, dir: &Path, args: &[&str]) -> String {
-    let output = Command::new("git")
+    let output = git_output(home, dir, args);
+
+    assert!(
+        output.status.success(),
+        "git {args:?} failed:\n{}",
+        text(&output.stderr)
+    );
+
+    text(&output.stdout)
+}
+
+/// Runs git with the fixture home and a fixed identity, without judging the exit status.
+fn git_output(home: &Path, dir: &Path, args: &[&str]) -> Output {
+    Command::new("git")
         .args([
             "-c",
             "user.email=rt@example.com",
@@ -293,15 +356,7 @@ fn git(home: &Path, dir: &Path, args: &[&str]) -> String {
         .current_dir(dir)
         .env("HOME", home)
         .output()
-        .expect("git should run");
-
-    assert!(
-        output.status.success(),
-        "git {args:?} failed:\n{}",
-        text(&output.stderr)
-    );
-
-    text(&output.stdout)
+        .expect("git should run")
 }
 
 fn text(bytes: &[u8]) -> String {

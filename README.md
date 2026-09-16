@@ -57,6 +57,7 @@ autojump = false
 - `rt clone` (alias: `c`): clone a repository into the computed tree path.
 - `rt delete` (alias: `d`): delete a managed repository.
 - `rt tree` (alias: `t`): print the repository tree under `root`.
+- `rt worktree` (alias: `wt`): manage the worktrees of the current repository.
 - `rt help`: show command help.
 
 ### One repository, one worktree per branch
@@ -77,21 +78,30 @@ rt clone --worktree=dev git@github.com:owner/repo.git  # -> {root}/github.com/ow
 
 - the worktree is named after the remote's default branch (`main`, `master`, `trunk`, ...),
   unless a branch is given with `--worktree=<branch>`;
-- `rt worktree add <branch>` run inside any of these checkouts creates the next one next to
-  it, and `rt delete` inside a checkout removes that worktree only (refusing to discard
-  uncommitted work);
 - `clone.depth` does not apply to `--worktree`: shallow history cannot merge branches that
-  diverged, which is the point of the layout.
-
-Plain `rt clone` is unchanged and still produces an ordinary clone at the mapped path.
+  diverged, which is the point of the layout;
+- plain `rt clone` is unchanged and still produces an ordinary clone at the mapped path.
 
 ### Worktree commands
 
-`rt worktree` (alias: `wt`) is a command group for `git worktree`.
+`rt worktree` (alias: `wt`) manages the checkouts of the repository you are standing in:
+`<repo>/<branch>` in the bare layout above, and a `<repo>-<branch>` sibling when the clone is
+ordinary. Every command resolves the repository from the current directory, so it works from
+a subdirectory and from any of the checkouts.
 
-- `rt worktree add` (aliases: `wt a`, `wa`): create a new worktree.
-- `rt worktree list` (aliases: `wt l`, `wl`): list worktrees for the current repository.
-- `rt worktree delete` (aliases: `wt d`, `wd`): interactively delete a worktree for the current repository.
+| Command | What it does |
+| --- | --- |
+| `rt wt add <branch>` (alias `a`) | Create the checkout. Fetches `origin` first, so a branch created upstream after the clone is usable: `origin/<branch>` is tracked when it exists, an existing local branch is checked out untouched, and anything else is a new branch off the remote's default. `--from <ref>` starts from an explicit reference, `--no-fetch` skips the fetch. |
+| `rt wt list` (alias `l`) | One line per checkout, `<branch>\t<path>`, sorted by branch, with `locked` / `prunable` markers; `--paths` prints the paths only. |
+| `rt wt remove [<branch>] [--force]` (aliases `rm`, `delete`) | Remove that checkout; without a branch it asks which one. Without `--force` git refuses a worktree with uncommitted changes. |
+| `rt wt prune` | Collect registrations whose directory was deleted by hand. |
+| `rt wt path <branch>` | Print the path of a branch's checkout, for `cd $(rt wt path dev)`. |
+| `rt wt lock <branch> [--reason <text>]` / `rt wt unlock <branch>` | Protect a checkout from `prune` and `remove`. |
+| `rt wt move <branch> <path>` | Move a checkout to another directory; the branch keeps its name. |
+
+`rt delete` is the other direction: naming a path or URL deletes the whole repository with
+every worktree in it, while `rt delete` inside a linked worktree (like a plain
+`git worktree remove`) deletes that worktree only, refusing to discard uncommitted work.
 
 ## Integrations
 

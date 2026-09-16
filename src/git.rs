@@ -6,7 +6,7 @@
 
 use std::ffi::OsStr;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 
 use anyhow::{Context, Result, bail};
@@ -80,6 +80,137 @@ pub fn is_reserved_worktree_name(name: &str) -> bool {
         Some(first) => first.is_empty() || first.starts_with('.') || ADMIN_ENTRIES.contains(&first),
         None => true,
     }
+}
+
+/// One record of `git worktree list --porcelain`: a checkout git knows about.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct WorktreeEntry {
+    /// Absolute path of the checkout.
+    pub path: PathBuf,
+    /// Short name of the branch checked out there; `None` when bare or detached.
+    pub branch: Option<String>,
+    /// The bare repository itself rather than a checkout.
+    pub bare: bool,
+    /// A checkout with a detached HEAD.
+    pub detached: bool,
+    /// Locked, so `git worktree prune` and `git worktree remove` refuse it.
+    pub locked: bool,
+    /// Registered but gone from disk; `git worktree prune` collects it.
+    pub prunable: bool,
+}
+
+impl WorktreeEntry {
+    /// Whether git registers a checkout here, as opposed to the bare repository.
+    pub fn is_checkout(&self) -> bool {
+        !self.bare
+    }
+
+    /// The branch name, or the placeholder `rt` prints for an entry without one.
+    pub fn branch_label(&self) -> &str {
+        self.branch.as_deref().unwrap_or("(detached)")
+    }
+}
+
+/// Every checkout git registers in `dir`, the bare repository included.
+pub async fn worktrees(dir: &Path) -> Result<Vec<WorktreeEntry>> {
+    let output = capture(
+        command_in(dir).args(["worktree", "list", "--porcelain"]),
+        "git worktree list",
+    )
+    .await?;
+
+    Ok(parse_worktrees(&output))
+}
+
+/// Parses `git worktree list --porcelain`: blank-line separated records, each starting
+/// with a `worktree <path>` line followed by its attributes.
+fn parse_worktrees(output: &str) -> Vec<WorktreeEntry> {
+    let mut entries: Vec<WorktreeEntry> = Vec::new();
+
+    for line in output.lines() {
+        if let Some(path) = line.strip_prefix("worktree ") {
+            entries.push(WorktreeEntry {
+                path: PathBuf::from(path),
+                branch: None,
+                bare: false,
+                detached: false,
+                locked: false,
+                prunable: false,
+            });
+            continue;
+        }
+
+        let Some(entry) = entries.last_mut() else {
+            continue;
+        };
+
+        if let Some(refname) = line.strip_prefix("branch ") {
+            entry.branch = Some(
+                refname
+                    .strip_prefix("refs/heads/")
+                    .unwrap_or(refname)
+                    .to_string(),
+            );
+        } else if line == "bare" {
+            entry.bare = true;
+        } else if line == "detached" {
+            entry.detached = true;
+        } else if line == "locked" || line.starts_with("locked ") {
+            entry.locked = true;
+        } else if line == "prunable" || line.starts_with("prunable ") {
+            entry.prunable = true;
+        }
+    }
+
+    entries
+}
+
+/// Whether `dir` is a bare repository, asked of git rather than guessed from the filesystem:
+/// the `.git` directory of an ordinary clone holds `HEAD`, `objects/` and `refs/` too, so
+/// [`is_bare`] cannot tell the two apart.
+pub async fn is_bare_repository(dir: &Path) -> Result<bool> {
+    let answer = capture(
+        command_in(dir).args(["rev-parse", "--is-bare-repository"]),
+        "git rev-parse --is-bare-repository",
+    )
+    .await?;
+
+    Ok(answer.trim() == "true")
+}
+
+/// The common git directory of the current directory: the bare repository for every
+/// worktree of the bare layout, `.git` for an ordinary clone.
+pub async fn common_git_dir() -> Result<PathBuf> {
+    let path = capture(
+        command().args(["rev-parse", "--path-format=absolute", "--git-common-dir"]),
+        "git rev-parse --git-common-dir",
+    )
+    .await?;
+
+    Ok(PathBuf::from(path.trim()))
+}
+
+/// The root of the checkout the current directory belongs to; `None` outside a work tree,
+/// which is the case inside a bare repository.
+pub async fn toplevel() -> Result<Option<PathBuf>> {
+    let output = command()
+        .args(["rev-parse", "--show-toplevel"])
+        .output()
+        .await
+        .context("failed to run git rev-parse --show-toplevel")?;
+
+    if !output.status.success() {
+        return Ok(None);
+    }
+
+    Ok(Some(PathBuf::from(
+        String::from_utf8_lossy(&output.stdout).trim(),
+    )))
+}
+
+/// Whether `refname` resolves in `dir`.
+pub async fn ref_exists(dir: &Path, refname: &str) -> Result<bool> {
+    succeeds(command_in(dir).args(["rev-parse", "--verify", "--quiet", refname])).await
 }
 
 /// A `git` command to run in the current directory.
@@ -185,5 +316,63 @@ mod tests {
         assert!(!is_reserved_worktree_name("main"));
         assert!(!is_reserved_worktree_name("feature/login"));
         assert!(!is_reserved_worktree_name("refs-backup"));
+    }
+
+    #[test]
+    fn parses_the_porcelain_registry() {
+        let output = "\
+worktree /r/A
+bare
+
+worktree /r/A/dev
+HEAD 1111111111111111111111111111111111111111
+branch refs/heads/dev
+locked release freeze
+
+worktree /r/A/main
+HEAD 2222222222222222222222222222222222222222
+branch refs/heads/main
+
+";
+
+        let entries = parse_worktrees(output);
+
+        assert_eq!(entries.len(), 3);
+        assert_eq!(entries[0].path, Path::new("/r/A"));
+        assert!(entries[0].bare);
+        assert!(!entries[0].is_checkout());
+        assert_eq!(entries[0].branch, None);
+
+        assert_eq!(entries[1].path, Path::new("/r/A/dev"));
+        assert_eq!(entries[1].branch.as_deref(), Some("dev"));
+        assert_eq!(entries[1].branch_label(), "dev");
+        assert!(entries[1].locked);
+        assert!(!entries[1].bare);
+
+        assert_eq!(entries[2].branch.as_deref(), Some("main"));
+        assert!(!entries[2].locked);
+    }
+
+    #[test]
+    fn parses_detached_and_prunable_entries() {
+        let output = "\
+worktree /r/A/main
+HEAD 1111111111111111111111111111111111111111
+detached
+prunable gitdir file points to non-existent location
+
+";
+
+        let entries = parse_worktrees(output);
+
+        assert_eq!(entries.len(), 1);
+        assert!(entries[0].detached);
+        assert!(entries[0].prunable);
+        assert_eq!(entries[0].branch_label(), "(detached)");
+    }
+
+    #[test]
+    fn ignores_attribute_lines_without_a_record() {
+        assert!(parse_worktrees("HEAD 1111111111111111111111111111111111111111\n").is_empty());
     }
 }

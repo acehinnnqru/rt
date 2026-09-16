@@ -47,7 +47,7 @@ enum Commands {
     Tree,
 
     /// Worktree management commands
-    #[command(alias = "wt")]
+    #[command(visible_alias = "wt")]
     Worktree {
         #[command(subcommand)]
         command: WorktreeCommands,
@@ -56,20 +56,68 @@ enum Commands {
 
 #[derive(Subcommand)]
 enum WorktreeCommands {
-    /// Create a new worktree
+    /// Create a worktree for a branch
     #[command(alias = "a")]
     Add {
-        /// Branch name for the new worktree
+        /// Branch to check out; created from the remote when it does not exist locally
+        branch: String,
+        /// Start point for a new branch (defaults to the remote branch, else the remote HEAD)
+        #[arg(long, value_name = "REF")]
+        from: Option<String>,
+        /// Do not fetch origin before resolving the branch
+        #[arg(long)]
+        no_fetch: bool,
+    },
+
+    /// List the worktrees of the current repository
+    #[command(alias = "l")]
+    List {
+        /// Print only the paths, one per line
+        #[arg(long)]
+        paths: bool,
+    },
+
+    /// Remove a worktree, asking which one when no branch is given
+    #[command(alias = "rm", alias = "delete", alias = "d")]
+    Remove {
+        /// Branch whose worktree to remove, or its path
+        branch: Option<String>,
+        /// Remove even with modified or untracked files
+        #[arg(long, short)]
+        force: bool,
+    },
+
+    /// Remove registrations of worktrees whose directory is gone
+    Prune,
+
+    /// Print the path of a branch's worktree
+    Path {
+        /// Branch name
         branch: String,
     },
 
-    /// List worktrees for the current repository
-    #[command(alias = "l")]
-    List,
+    /// Lock a worktree, so that it is neither pruned nor removed
+    Lock {
+        /// Branch name
+        branch: String,
+        /// Reason recorded with the lock
+        #[arg(long, value_name = "TEXT")]
+        reason: Option<String>,
+    },
 
-    /// Interactively delete a worktree
-    #[command(alias = "d")]
-    Delete,
+    /// Unlock a worktree
+    Unlock {
+        /// Branch name
+        branch: String,
+    },
+
+    /// Move a worktree to another directory
+    Move {
+        /// Branch name
+        branch: String,
+        /// Destination directory
+        path: String,
+    },
 }
 
 #[tokio::main]
@@ -84,11 +132,26 @@ async fn main() -> Result<()> {
         Commands::Delete { repo } => commands::delete::run(&config, repo.as_deref()).await,
         Commands::Tree => commands::tree::run(&config).await,
         Commands::Worktree { command } => match command {
-            WorktreeCommands::Add { branch } => {
-                commands::worktree::add::run(&config, &branch).await
+            WorktreeCommands::Add {
+                branch,
+                from,
+                no_fetch,
+            } => commands::worktree::add::run(&config, &branch, from.as_deref(), no_fetch).await,
+            WorktreeCommands::List { paths } => commands::worktree::list::run(paths).await,
+            WorktreeCommands::Remove { branch, force } => {
+                commands::worktree::remove::run(branch.as_deref(), force).await
             }
-            WorktreeCommands::List => commands::worktree::list::run(&config).await,
-            WorktreeCommands::Delete => commands::worktree::delete::run(&config).await,
+            WorktreeCommands::Prune => commands::worktree::prune::run().await,
+            WorktreeCommands::Path { branch } => commands::worktree::path::run(&branch).await,
+            WorktreeCommands::Lock { branch, reason } => {
+                commands::worktree::lock::run_lock(&branch, reason.as_deref()).await
+            }
+            WorktreeCommands::Unlock { branch } => {
+                commands::worktree::lock::run_unlock(&branch).await
+            }
+            WorktreeCommands::Move { branch, path } => {
+                commands::worktree::r#move::run(&branch, &path).await
+            }
         },
     }
 }
