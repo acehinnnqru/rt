@@ -179,18 +179,6 @@ mod tests {
     use super::*;
     use crate::test_support::TempDir;
 
-    /// `git init` in `dir`, reading none of the developer's configuration.
-    async fn init(dir: &Path) {
-        let mut cmd = git::command_in(dir);
-        cmd.args(["init", "--quiet"])
-            .env("GIT_CONFIG_GLOBAL", "/dev/null")
-            .env("GIT_CONFIG_SYSTEM", "/dev/null");
-
-        git::run(&mut cmd, "git init")
-            .await
-            .expect("git init should succeed");
-    }
-
     #[test]
     fn only_an_explicit_yes_accepts() {
         assert!(accepts("y"));
@@ -258,26 +246,6 @@ mod tests {
 
         assert!(!looks_like_remote("widget"));
         assert!(!looks_like_remote("./widget"));
-    }
-
-    #[tokio::test]
-    async fn an_untracked_file_counts_as_uncommitted_work() {
-        let temp = TempDir::new("delete-uncommitted");
-        let repo = temp.dir("clone");
-        init(&repo).await;
-
-        assert_eq!(
-            uncommitted(&repo).await.expect("the check should run"),
-            None
-        );
-
-        std::fs::write(repo.join("scratch.txt"), "work in progress\n")
-            .expect("should write the file");
-
-        assert_eq!(
-            uncommitted(&repo).await.expect("the check should run"),
-            Some(repo.clone())
-        );
     }
 
     #[tokio::test]

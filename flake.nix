@@ -29,6 +29,10 @@
             lockFile = ./Cargo.lock;
           };
 
+          # The integration tests drive real git repositories through the built binary,
+          # so the check phase needs git on PATH; the sandbox has none otherwise.
+          nativeCheckInputs = [pkgs.git];
+
           meta = with pkgs.lib; {
             description = "Git repository manager with predictable directory tree";
             homepage = "https://github.com/acehinnnqru/rt";

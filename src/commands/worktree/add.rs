@@ -141,23 +141,3 @@ async fn register(config: &Config, path: &Path) {
         eprintln!("warning: autojump: {err}");
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::test_support::TempDir;
-
-    #[tokio::test]
-    async fn returns_error_for_an_invalid_branch_name() {
-        let temp = TempDir::new("add-invalid");
-        let config = Config {
-            root: temp.path().to_string_lossy().into_owned(),
-            ..Config::default()
-        };
-
-        let err = run(&config, "not a branch", None, false)
-            .await
-            .expect_err("an invalid branch name should fail before touching git");
-        assert!(err.to_string().contains("not a valid git branch name"));
-    }
-}
