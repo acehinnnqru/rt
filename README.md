@@ -55,7 +55,8 @@ autojump = false
 ### Core commands
 
 - `rt clone` (alias: `c`): clone a repository into the computed tree path.
-- `rt delete` (alias: `d`): delete a managed repository.
+- `rt delete` (alias: `d`): delete a managed repository; asks first, and again before it
+  discards uncommitted work.
 - `rt tree` (alias: `t`): print the repository tree under `root`.
 - `rt worktree` (alias: `wt`): manage the worktrees of the current repository.
 - `rt help`: show command help.
@@ -101,7 +102,9 @@ a subdirectory and from any of the checkouts.
 
 `rt delete` is the other direction: naming a path or URL deletes the whole repository with
 every worktree in it, while `rt delete` inside a linked worktree (like a plain
-`git worktree remove`) deletes that worktree only, refusing to discard uncommitted work.
+`git worktree remove`) deletes that worktree only. It asks before deleting — the absolute
+path first, then any checkout that is about to lose uncommitted work — and `--force` skips
+both questions, which is also the only way to answer when there is no terminal.
 
 ## Integrations
 

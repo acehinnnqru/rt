@@ -154,7 +154,7 @@ any linked worktree, or from the bare repository itself.
 | `lock <branch> [--reason <text>]` / `unlock <branch>` | Protect a checkout from `prune` and `remove`. |
 | `move <branch> <path>` | Move a checkout; the branch keeps its name. |
 
-### `rt delete [<path|url>]`
+### `rt delete [<path|url>] [--force]`
 
 - `rt delete <url>` — parse the URL, map it, remove the whole repository. In the bare layout
   that takes every checkout inside it along; a checkout that was moved elsewhere with
@@ -164,9 +164,15 @@ any linked worktree, or from the bare repository itself.
   not exist is parsed as a remote URL when it looks like one (`scheme://`, an `@`, or two or
   more slashes); otherwise it is treated as a path and `path does not exist: …` is the error.
 - `rt delete` — the current directory. Inside a linked worktree this removes **that worktree
-  only**, through `git worktree remove`, so uncommitted work is not discarded silently and
-  the registration is pruned with it. From the bare repository or an ordinary clone it
-  removes the whole repository.
+  only**, through `git worktree remove`, so the registration is pruned with it. From the bare
+  repository or an ordinary clone it removes the whole repository.
+- Every deletion is confirmed first, on the terminal: the absolute path, and then, when a
+  checkout that is about to go holds work that is not in git yet, that checkout as well — so
+  agreeing to the path is not also agreeing to lose uncommitted work. Only an explicit `y` or
+  `yes` goes ahead; a newline or the end of the input declines.
+- `--force` (`-f`) skips the questions and takes uncommitted work with it. Without a terminal
+  there is nobody to ask, so `--force` is required there: a script, pipe or CI run gets
+  `refusing to delete without confirmation: pass --force` instead of a hang.
 
 ### `rt tree`
 
@@ -250,8 +256,9 @@ rt wt rm fix-login                # one checkout, refuses a dirty tree
 rt wt rm fix-login --force        # ... for real
 rm -rf {root}/github.com/owner/repo/scratch
 rt wt prune                       # collect the stale registration
-rt delete .                       # from inside a checkout: that checkout only
+rt delete .                       # from inside a checkout: that checkout only, after asking
 rt delete git@github.com:owner/repo.git   # the whole project, worktrees included
+rt delete --force .               # no questions: for scripts, and for uncommitted work
 ```
 
 ## 7. Output contract
@@ -324,6 +331,12 @@ resolving the branch wherever it ended up.
 URL, which is what makes `rt delete .` safe. A URL argument is mapped through the same rule
 as `clone` — so it only works when the remote maps to the same path it was cloned from.
 
+**`rt delete` asks what it is about to do.** The question names the absolute path, not the
+argument as typed, so a relative path the shell expanded differently than expected is still
+visible before it goes. A checkout inside the doomed directory with uncommitted work is asked
+about separately, because losing that work is not what agreeing to a path means. `--force`
+answers both questions, and is the only way to answer without a terminal.
+
 ## 9. Troubleshooting
 
 | Symptom | Cause and fix |
@@ -335,6 +348,7 @@ as `clone` — so it only works when the remote maps to the same path it was clo
 | `not inside a git repository: run this from a checkout managed by rt` | `rt wt …` was run outside a repository. `cd` into a checkout first. |
 | `root directory does not exist: <path>` | `rt tree` requires `root` to exist; `mkdir -p` it, or fix `root` in `~/.rt.toml`. |
 | `pass a branch name: rt wt remove <branch>` | `rt wt rm` without a branch needs a terminal for its menu; a script or pipe gets this error instead of a hang. |
+| `refusing to delete without confirmation: pass --force` | `rt delete` asks on the terminal, and a script, pipe or CI run has none. `--force` is the answer — note that it also discards uncommitted work. |
 | `warning: ignoring clone.depth = N for --worktree` | Expected on the bare layout (§8). |
 | `warning: zoxide: zoxide command not found in PATH` | `integrations.zoxide` is on but `zoxide` is not installed. The checkout exists; install `zoxide` or turn the key off. |
 | Two worktrees cannot be merged | The repository was made shallow by hand (`git -C <repo> fetch --unshallow origin`). `rt` itself never makes a `--worktree` clone shallow. |

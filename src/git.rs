@@ -82,6 +82,15 @@ pub fn is_reserved_worktree_name(name: &str) -> bool {
     }
 }
 
+/// `path` with symlinks resolved, or unchanged when it does not exist.
+///
+/// Git reports the paths it knows the way the filesystem resolves them — a worktree created
+/// through `/var` on macOS is registered as `/private/var` — so a path compared against
+/// git's has to be resolved the same way.
+pub fn canonical(path: &Path) -> PathBuf {
+    fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
 /// One record of `git worktree list --porcelain`: a checkout git knows about.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct WorktreeEntry {

@@ -35,11 +35,14 @@ enum Commands {
         worktree: Option<String>,
     },
 
-    /// Delete a managed repository
+    /// Delete a managed repository, asking first
     #[command(alias = "d")]
     Delete {
         /// Repository path or remote URL (defaults to current directory)
         repo: Option<String>,
+        /// Delete without asking, even when a checkout holds uncommitted changes
+        #[arg(long, short)]
+        force: bool,
     },
 
     /// Print the repository tree under root
@@ -129,7 +132,9 @@ async fn main() -> Result<()> {
         Commands::Clone { url, worktree } => {
             commands::clone::run(&config, &url, worktree.as_deref()).await
         }
-        Commands::Delete { repo } => commands::delete::run(&config, repo.as_deref()).await,
+        Commands::Delete { repo, force } => {
+            commands::delete::run(&config, repo.as_deref(), force).await
+        }
         Commands::Tree => commands::tree::run(&config).await,
         Commands::Worktree { command } => match command {
             WorktreeCommands::Add {

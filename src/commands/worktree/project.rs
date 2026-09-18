@@ -114,12 +114,12 @@ impl Project {
             .find(|entry| entry.branch.as_deref() == Some(branch))
     }
 
-    /// The checkout registered at `path`, comparing paths as the filesystem spells them:
-    /// on macOS a worktree created through `/var` is registered as `/private/var`.
+    /// The checkout registered at `path`, comparing paths as git spells them: on macOS a
+    /// worktree created through `/var` is registered as `/private/var`.
     pub fn find_path(&self, path: &Path) -> Option<&WorktreeEntry> {
-        let wanted = canonical(path);
+        let wanted = git::canonical(path);
         self.checkouts()
-            .find(|entry| canonical(&entry.path) == wanted)
+            .find(|entry| git::canonical(&entry.path) == wanted)
     }
 
     /// Resolves a branch name or a path to the checkout it names.
@@ -139,16 +139,11 @@ impl Project {
     /// is none.
     pub async fn current_worktree(&self) -> Option<&WorktreeEntry> {
         let toplevel = git::toplevel().await.ok().flatten()?;
-        let wanted = canonical(&toplevel);
+        let wanted = git::canonical(&toplevel);
 
         self.checkouts()
-            .find(|entry| canonical(&entry.path) == wanted)
+            .find(|entry| git::canonical(&entry.path) == wanted)
     }
-}
-
-/// `path` with symlinks resolved, or unchanged when it does not exist.
-fn canonical(path: &Path) -> PathBuf {
-    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
 #[cfg(test)]
