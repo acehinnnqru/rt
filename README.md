@@ -2,6 +2,14 @@
 
 `rt` means **repo tree**: a Git repository manager that stores repositories in a predictable directory tree derived from remote URLs.
 
+## Installation
+
+```sh
+cargo install a9u-rt
+```
+
+The package is named `a9u-rt`; the installed command is `rt`.
+
 ## What problem it solves
 
 Instead of cloning repositories into random locations, `rt` maps each Git remote to a stable path under one root directory.

@@ -1,13 +1,25 @@
 [package]
-name = "rt"
+name = "a9u-rt"
 version = "0.1.0"
 edition = "2024"
+description = "Git repository manager that stores repositories in a predictable directory tree"
+license = "MIT"
+repository = "https://github.com/acehinnnqru/rt"
+readme = "README.md"
+keywords = ["git", "worktree", "repository", "cli"]
+categories = ["command-line-utilities", "development-tools"]
+
+[[bin]]
+name = "rt"
+path = "src/main.rs"
 
 [dependencies]
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 dirs = "5"
 serde = { version = "1", features = ["derive"] }
-test-case = "3.3.1"
 tokio = { version = "1", features = ["full"] }
 toml = "0.8"
+
+[dev-dependencies]
+test-case = "3.3.1"
