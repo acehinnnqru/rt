@@ -47,7 +47,7 @@ root = "{$HOME}/r"
 depth = 1
 
 [integrations]
-zoxide = true
+zoxide = false
 autojump = false
 ```
 
@@ -55,8 +55,8 @@ autojump = false
 
 - `root` (string): base directory for all managed repositories.
 - `clone.depth` (integer): shallow clone depth used during clone operations.
-- `integrations.zoxide` (bool): when `true`, add cloned paths to `zoxide`.
-- `integrations.autojump` (bool): when `true`, add cloned paths to `autojump`.
+- `integrations.zoxide` (bool): when `true`, register created checkouts with `zoxide`.
+- `integrations.autojump` (bool): when `true`, register created checkouts with `autojump`.
 
 ## Commands
 
@@ -100,24 +100,26 @@ a subdirectory and from any of the checkouts.
 
 | Command | What it does |
 | --- | --- |
-| `rt wt add <branch>` (alias `a`) | Create the checkout. Fetches `origin` first, so a branch created upstream after the clone is usable: `origin/<branch>` is tracked when it exists, an existing local branch is checked out untouched, and anything else is a new branch off the remote's default. `--from <ref>` starts from an explicit reference, `--no-fetch` skips the fetch. |
+| `rt wt add <branch>` (alias `a`) | Create the checkout. Fetches `origin` first, so a branch created upstream after the clone is usable: an existing local branch is checked out untouched, `origin/<branch>` is tracked when it exists, and anything else is a new branch off the remote's default. `--from <ref>` starts from an explicit reference, `--no-fetch` skips the fetch. |
 | `rt wt list` (alias `l`) | One line per checkout, `<branch>\t<path>`, sorted by branch, with `locked` / `prunable` markers; `--paths` prints the paths only. |
-| `rt wt remove [<branch>] [--force]` (aliases `rm`, `delete`) | Remove that checkout; without a branch it asks which one. Without `--force` git refuses a worktree with uncommitted changes. |
+| `rt wt remove [<branch>] [--force]` (aliases `rm`, `delete`, `d`) | Remove that checkout; without a branch it asks which one. Without `--force` git refuses a worktree with uncommitted changes. |
 | `rt wt prune` | Collect registrations whose directory was deleted by hand. |
 | `rt wt path <branch>` | Print the path of a branch's checkout, for `cd $(rt wt path dev)`. |
 | `rt wt lock <branch> [--reason <text>]` / `rt wt unlock <branch>` | Protect a checkout from `prune` and `remove`. |
 | `rt wt move <branch> <path>` | Move a checkout to another directory; the branch keeps its name. |
 
-`rt delete` is the other direction: naming a path or URL deletes the whole repository with
-every worktree in it, while `rt delete` inside a linked worktree (like a plain
-`git worktree remove`) deletes that worktree only. It asks before deleting — the absolute
-path first, then any checkout that is about to lose uncommitted work — and `--force` skips
-both questions, which is also the only way to answer when there is no terminal.
+`rt delete` is the other direction. Naming a repository path or URL removes the whole
+repository — in the bare layout, every checkout inside it — while a checkout outside it (an
+ordinary clone's sibling, or one moved with `rt wt move`) survives as files. Naming a linked
+worktree — or standing at its root — removes that worktree only, like a plain
+`git worktree remove`. It asks before deleting — the absolute path first, then a checkout that
+is about to lose uncommitted work — and `--force` skips both questions, which is also the only
+way to answer when there is no terminal.
 
 ## Integrations
 
-- `zoxide`: automatically register cloned paths for faster directory jumping.
-- `autojump`: automatically register cloned paths for autojump navigation.
+- `zoxide`: automatically register created checkouts for faster directory jumping.
+- `autojump`: automatically register created checkouts for autojump navigation.
 
 ## Dependencies
 
@@ -126,6 +128,7 @@ both questions, which is also the only way to answer when there is no terminal.
 - `anyhow`: error handling.
 - `serde`: serialization/deserialization.
 - `toml`: TOML parsing and serialization.
+- `dirs`: home directory lookup.
 
 ## Documentation
 

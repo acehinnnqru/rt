@@ -4,5 +4,5 @@ root = "{$HOME}/r"
 depth = 1
 
 [integrations]
-zoxide = true
+zoxide = false
 autojump = false

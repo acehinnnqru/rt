@@ -74,7 +74,7 @@ root = "{$HOME}/r"
 depth = 1
 
 [integrations]
-zoxide = true
+zoxide = false
 autojump = false
 ```
 
@@ -137,7 +137,10 @@ rt <command>
 
 `--worktree` takes its value with `=`: `rt clone --worktree dev <url>` is a parse error, so a
 positional URL is never mistaken for the branch. The default branch is whatever
-`refs/remotes/origin/HEAD` says (`main`, `master`, `trunk`, …) — never hard-coded.
+`refs/remotes/origin/HEAD` says (`main`, `master`, `trunk`, …) — never hard-coded. When the
+remote has no usable HEAD (a bare remote whose HEAD points at a branch nobody pushed), an
+explicit `--worktree=<branch>` still works and that branch becomes the bare repository's HEAD;
+`--worktree` without a branch needs the remote's HEAD.
 
 ### `rt worktree` (alias `wt`)
 
@@ -147,7 +150,7 @@ any linked worktree, or from the bare repository itself.
 | Command | What it does |
 | --- | --- |
 | `add <branch> [--from <ref>] [--no-fetch]` (alias `a`) | Create the checkout and print its path. Fetches `origin` first, so a branch created upstream after the clone is usable. `--from <ref>` starts from an explicit reference, `--no-fetch` skips the fetch. |
-| `list [--paths]` (alias `l`) | One line per checkout: `<branch>\t<path>`, sorted by branch, `locked` / `prunable` appended as extra fields. `--paths` prints paths only. |
+| `list [--paths]` (alias `l`) | One line per checkout: `<branch>\t<path>`, sorted by branch, detached entries last by path, `locked` / `prunable` appended as extra fields. `--paths` prints paths only. |
 | `remove [<branch>] [--force]` (aliases `rm`, `delete`, `d`) | Remove that checkout. Without a branch it asks which one; `--force` discards uncommitted work. |
 | `prune` | Collect registrations whose directory was deleted by hand. |
 | `path <branch>` | Print a checkout's path, for `cd $(rt wt path dev)`. |
@@ -157,15 +160,21 @@ any linked worktree, or from the bare repository itself.
 ### `rt delete [<path|url>] [--force]`
 
 - `rt delete <url>` — parse the URL, map it, remove the whole repository. In the bare layout
-  that takes every checkout inside it along; a checkout that was moved elsewhere with
-  `rt wt move` survives on disk.
+  that takes every checkout inside it along. Only directories inside the named path are
+  deleted: an ordinary clone's `rt wt add` checkouts are `<repo>-<branch>` siblings, and a
+  checkout relocated with `rt wt move` also lives elsewhere; those survive on disk, with a
+  `.git` link into the removed repository.
 - `rt delete <path>` — an existing path is used as given, so `rt delete .` or
-  `rt delete /abs/path` work and are never mistaken for a remote URL. An argument that does
-  not exist is parsed as a remote URL when it looks like one (`scheme://`, an `@`, or two or
-  more slashes); otherwise it is treated as a path and `path does not exist: …` is the error.
-- `rt delete` — the current directory. Inside a linked worktree this removes **that worktree
-  only**, through `git worktree remove`, so the registration is pruned with it. From the bare
-  repository or an ordinary clone it removes the whole repository.
+  `rt delete /abs/path` work and are never mistaken for a remote URL. A linked worktree path
+  is removed through `git worktree remove`, so its registration is pruned with it; any other
+  path is removed as a directory. An argument that does not exist is parsed as a remote URL
+  when it looks like one (`scheme://`, an `@`, or two or more slashes); otherwise it is
+  treated as a path and `path does not exist: …` is the error.
+- `rt delete` — the current directory. At the root of a linked worktree this removes **that
+  worktree only**, through `git worktree remove`, so the registration is pruned with it. At
+  the root of the bare repository or an ordinary clone it removes the whole repository. The
+  no-argument form acts on the directory itself, so a subdirectory is deleted as the path it
+  is; `cd` to the checkout root to remove the whole checkout.
 - Every deletion is confirmed first, on the terminal: the absolute path, and then, when a
   checkout that is about to go holds work that is not in git yet, that checkout as well — so
   agreeing to the path is not also agreeing to lose uncommitted work. Only an explicit `y` or
@@ -176,10 +185,11 @@ any linked worktree, or from the bare repository itself.
 
 ### `rt tree`
 
-Prints `root` and everything below it as an ASCII tree. Ordinary clones and linked worktrees
+Prints `root` and the directory tree below it. Only directories appear — plain files are
+skipped — and hidden directories are skipped everywhere. Ordinary clones and linked worktrees
 are leaves (the walk never descends into `src/`, `target/`, …); a bare repository is a
 container, so its checkouts are listed and git's own entries (`objects`, `refs`, `worktrees`,
-…) are skipped. Hidden directories are skipped everywhere.
+…) are skipped.
 
 ```console
 $ rt tree
@@ -280,9 +290,9 @@ Commands that print a path print an **absolute** path and nothing else on stdout
 | `rt delete …` | `deleted <path>` or `deleted worktree <path>` |
 | `rt tree` | the root, then the tree |
 
-Git's chatty commands are run with `--quiet` precisely so that `rt clone … | xargs cd`-style
-scripts keep working, and `rt wt list` order is defined by `rt`, not by
-`git worktree list`.
+The git commands that write progress to stdout (`git init`, `git worktree add`) run with
+`--quiet`, so `rt clone … | xargs cd`-style scripts keep working; git's remaining progress
+goes to stderr. `rt wt list` order is defined by `rt`, not by `git worktree list`.
 
 ## 8. Behaviour worth knowing
 
@@ -298,9 +308,9 @@ invocation; there is no config key that turns it into the default.
 
 **Reserved branch names.** In the bare layout the checkout path is a child of the git
 directory, so a branch whose first path component is one of git's own entries (`objects`,
-`refs`, `worktrees`, `hooks`, `HEAD`, …) is rejected before anything is created. `worktrees`
-is not a theoretical case: git accepts the checkout and then registers it *inside the
-checkout it administers*. Nested names are fine — `feature/login` maps to
+`refs`, `worktrees`, `hooks`, `HEAD`, …) is rejected before the repository is created.
+`worktrees` is not a theoretical case: git accepts the checkout and then registers it *inside
+the checkout it administers*. Nested names are fine — `feature/login` maps to
 `<repo>/feature/login`, and only the first component is checked.
 
 **`rt wt add` never moves a branch ref.** If `refs/heads/<branch>` exists locally, it is
@@ -342,7 +352,7 @@ answers both questions, and is the only way to answer without a terminal.
 | Symptom | Cause and fix |
 | --- | --- |
 | `repository already exists at <path>` | `rt clone` never overwrites. Remove it (`rt delete <path>`) or clone the other remote spelling (`git@` vs `https://`) — both map to the same path. |
-| `could not determine the default branch of <url>` | The remote is empty or unreachable. Pass `--worktree=<branch>` explicitly, or check credentials. |
+| `could not determine the default branch of <url>` | The remote is empty or unreachable, or its HEAD points at a branch nobody pushed. Check credentials; if a branch does exist, name it with `--worktree=<branch>`. |
 | `branch 'x' does not exist on <url>` | `--worktree=<branch>` requires the branch to exist on `origin`; creating branches is `rt wt add`'s job. |
 | `branch 'x' cannot be a worktree inside the repository` | The name collides with a git directory entry (§8). Pick another name. |
 | `not inside a git repository: run this from a checkout managed by rt` | `rt wt …` was run outside a repository. `cd` into a checkout first. |

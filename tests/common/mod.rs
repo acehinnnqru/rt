@@ -152,6 +152,12 @@ impl Fixture {
         self.root.join("example.com/acme/widget")
     }
 
+    /// Replaces the fixture `~/.rt.toml` with a config whose `root` is `root`.
+    pub fn set_config_root(&self, root: &str) {
+        std::fs::write(self.home.join(".rt.toml"), format!("root = \"{root}\"\n"))
+            .expect("should write fixture config");
+    }
+
     /// Clones the fixture origin into the bare layout and returns the default worktree.
     pub fn bare(&self) -> PathBuf {
         self.rt_ok(&["clone", URL, "--worktree"]);
@@ -161,6 +167,15 @@ impl Fixture {
     /// A worktree inside the bare repository.
     pub fn worktree(&self, branch: &str) -> PathBuf {
         self.repo().join(branch)
+    }
+
+    /// Points origin's HEAD at a branch that does not exist, so `git ls-remote --symref
+    /// HEAD` reports no default branch.
+    pub fn hide_origin_head(&self) {
+        self.git(
+            &self.origin,
+            &["symbolic-ref", "HEAD", "refs/heads/not-pushed"],
+        );
     }
 
     /// Where `rt` maps `name`, for remotes that are not the fixture origin.

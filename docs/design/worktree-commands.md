@@ -107,9 +107,9 @@ The new rule asks git instead of re-deriving the path:
 
 1. `git rev-parse --path-format=absolute --git-common-dir` — the common git directory, which
    is `A` for every worktree of the bare layout and `.git` for an ordinary clone. Outside a
-   repository this fails; the command then reports
-   `not inside a git repository: run this from a checkout managed by rt` instead of letting
-   git's own message through.
+   repository this fails; the command reports
+   `not inside a git repository: run this from a checkout managed by rt`, with git's own
+   error as the cause.
 2. `git -C <common> rev-parse --is-bare-repository`:
    - `true` → **bare layout**, the project directory is `<common>` (= `A`);
    - `false` → **ordinary clone**, the project directory is the *main* worktree, taken from
@@ -157,10 +157,10 @@ name never shares a namespace with a git directory.
 | --- | --- | --- |
 | `--from <ref>` given, and `refs/heads/<branch>` does not exist | `worktree add -b <branch> <path> <ref>` | the explicit base wins; the ref is validated first (`rev-parse --verify --quiet <ref>^{commit}`) so a typo fails before any directory is created |
 | `--from` given and the branch already exists | error: `branch '<branch>' already exists; pick another name or drop --from` | `-b` cannot create it, and silently checking the old branch out would ignore `--from` |
-| `refs/heads/<branch>` exists, checked out in another worktree | error naming that worktree's path | git's own message is good (`'dev' is already used by worktree at '…'`); ours adds `rt wt list` / `rt wt path` as the way to find it |
+| `refs/heads/<branch>` exists, checked out in another worktree | error naming that worktree's path | `branch '<branch>' is already checked out at <path>`; the path is git's registry entry, so a moved checkout is named where it is |
 | `refs/heads/<branch>` exists, not checked out anywhere | `worktree add <path> <branch>` | **the decision**: the branch is checked out as it is and its ref is not touched, even when it trails `origin/<branch>`. `wt add` creates a working area; it does not move refs the user owns |
 | `refs/remotes/origin/<branch>` exists | `worktree add --track -b <branch> <path> origin/<branch>` | the fresh (post-fetch) remote tip, with a real upstream |
-| neither exists | `worktree add -b <branch> <path> <origin/HEAD>` | a new branch off whatever the remote calls its default; `remote.origin.HEAD` comes from `clone-worktree.md` §3 step 8, and when it is missing the error points at `--from` |
+| neither exists | `worktree add -b <branch> <path> <origin/HEAD>` | a new branch off whatever the remote calls its default; `refs/remotes/origin/HEAD` comes from `clone-worktree.md` §3 step 8, and when it is missing the error points at `--from` |
 
 The two `-b` rows leave git's `branch.autoSetupMerge` alone, so a new branch that starts from
 a remote-tracking ref (`--from origin/dev`, and the `origin/HEAD` fallback) ends up tracking
@@ -189,9 +189,9 @@ one fetch serves every worktree, and `wt add` is the moment to do it.
 
 ## 6. `wt list [--paths]`
 
-Reads `git worktree list --porcelain` in the project (one git call) and lists **checkouts
-only**: the bare repository `A` is not a checkout and is never a row, while the main worktree
-of an ordinary clone is one and is.
+Reads one `git worktree list --porcelain` in the project and lists **checkouts only**: the
+bare repository `A` is not a checkout and is never a row, while the main worktree of an
+ordinary clone is one and is.
 
 ```
 dev      /Users/x/r/github.com/acme/widget/dev
@@ -217,7 +217,7 @@ With an argument:
    compute, e.g. through a `/var` → `/private/var` symlink);
 2. unknown target → `no worktree for branch '<branch>'`;
 3. the target is the worktree this command runs in → refuse:
-   `refusing to remove the worktree this command runs in; run rt delete from inside it, or
+   `refusing to remove the worktree this command runs in: run rt delete from inside it, or
    run rt wt remove from another checkout`. Measured: `git worktree remove <current>` exits 0
    and deletes the directory under the caller's shell, which leaves the shell in a deleted
    cwd. `rt delete` is the command whose documented meaning is "delete what I am standing
@@ -245,8 +245,9 @@ is why the flag is spelled out and never implied.
 
 - **`prune`** runs `git -C <dir> worktree prune -v` with inherited stdio, so git's
   `Removing worktrees/<id>: <reason>` lines reach stderr (measured: `prune -v` writes them
-  to stderr, not stdout). Exit status is git's. This is the cleanup for a worktree whose
-  directory was deleted by hand; `wt list` marks such entries `prunable` first.
+  to stderr, not stdout). The command exits non-zero when git does. This is the cleanup for
+  a worktree whose directory was deleted by hand; `wt list` marks such entries `prunable`
+  first.
 - **`path <branch>`** prints the registered absolute path of that branch's worktree; unknown
   branch → `no worktree for branch '<branch>'`. It is the `cd $(rt wt path dev)` accessor
   and needs no lock or table parsing.
@@ -268,10 +269,13 @@ is why the flag is spelled out and never implied.
 
 - **`rt clone --worktree`** is unchanged, including `--worktree[=<branch>]` and the refusal
   of reserved names. It can be seen as `wt add` with a bare repository to create first.
-- **`rt delete`** is unchanged: naming a path or URL removes a whole repository (every
-  worktree with it), and no argument inside a linked worktree removes that worktree.
-  `wt remove` and `rt delete` therefore overlap on purpose, from opposite directions:
-  "remove that one, from here" versus "remove this one / all of it".
+- **`rt delete`** keeps its meaning: naming a repository path or URL removes the whole
+  repository (every worktree with it), and a linked worktree — named, or the current
+  directory at its root — removes that worktree. It confirms every deletion, asking a
+  second time for a checkout with uncommitted work, and `--force` answers both questions
+  (see [`../usage.md`](../usage.md) §5). `wt remove` and `rt delete` therefore overlap on
+  purpose, from opposite directions: "remove that one, from here" versus "remove this one /
+  all of it".
 - **`rt tree`** needs no change: it already descends into a bare repository and lists its
   linked worktrees (`clone-worktree.md` §7.1).
 - **Integrations** (`zoxide`, `autojump`): `wt add` registers the created path like
