@@ -43,6 +43,9 @@ pub async fn run(config: &Config, url: &str, worktree: Option<&str>) -> Result<(
 
 /// Ordinary clone: the repository and its checkout both live at the mapped path.
 async fn clone_plain(config: &Config, url: &str, dest: &Path) -> Result<PathBuf> {
+    // The stdout contract is an absolute path, even when `root` is configured relative.
+    let dest = std::path::absolute(dest)?;
+
     let mut cmd = git::command();
     cmd.arg("clone");
 
@@ -50,10 +53,10 @@ async fn clone_plain(config: &Config, url: &str, dest: &Path) -> Result<PathBuf>
         cmd.arg("--depth").arg(config.clone.depth.to_string());
     }
 
-    cmd.arg(url).arg(dest);
+    cmd.arg(url).arg(&dest);
 
     git::run(&mut cmd, "git clone").await?;
-    Ok(dest.to_path_buf())
+    Ok(dest)
 }
 
 /// Bare repository at the mapped path plus a branch linked as a worktree inside it, so
@@ -137,21 +140,32 @@ async fn clone_worktree(
     Ok(checkout)
 }
 
-/// The remote's default branch and the branch to link as a worktree: the requested one,
-/// or the default branch when none was named.
+/// The bare repository's HEAD and the branch to link as a worktree: the requested branch, or
+/// the remote's default when none was named. When the remote has no default but a branch was
+/// requested, that branch serves as both.
 async fn resolve_branches(url: &str, requested: &str) -> Result<(String, String)> {
-    let default = default_branch(url).await?;
-    let checkout = if requested.is_empty() {
-        default.clone()
-    } else {
-        requested.to_string()
+    // An explicit branch can name the checkout even when the remote's HEAD does not resolve
+    // (a bare remote whose HEAD points at a branch nobody pushed, for example). That branch
+    // then also becomes the bare repository's HEAD, since there is no default to point at.
+    let default = match default_branch(url).await {
+        Ok(default) => Some(default),
+        Err(err) if requested.is_empty() => return Err(err),
+        Err(_) => None,
+    };
+    let default_known = default.is_some();
+    let checkout = match default.as_deref() {
+        Some(default) if requested.is_empty() => default.to_string(),
+        _ => requested.to_string(),
     };
 
     if !is_valid_branch_name(&checkout).await? {
         bail!("'{checkout}' is not a valid git branch name");
     }
 
-    if checkout != default && !branch_exists(url, &checkout).await? {
+    // A known default is already proved to exist on the remote; everything else, including
+    // an explicit branch when the remote has no HEAD, is checked before anything is created.
+    let default = default.unwrap_or_else(|| checkout.clone());
+    if (!default_known || checkout != default) && !branch_exists(url, &checkout).await? {
         bail!("branch '{checkout}' does not exist on {url}");
     }
 

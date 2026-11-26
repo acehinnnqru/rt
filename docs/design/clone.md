@@ -32,7 +32,7 @@ Two requirements follow, and they shape every decision below:
 
 1. **`rt clone` must print the checkout path on stdout, and nothing else.** It is the
    `cd "$(rt clone …)"` command; any extra stdout line is a bug.
-2. **A failed clone must leave nothing behind.** The mapped path is deterministic, so a
+2. **A failed clone must leave no repository behind.** The mapped path is deterministic, so a
    half-built repository at that path blocks every later attempt with
    `repository already exists at …`.
 
@@ -110,14 +110,17 @@ Design consequences that are deliberate, not incidental:
 `clone_plain` is intentionally thin:
 
 ```rust
+let dest = std::path::absolute(dest)?;
 cmd.arg("clone");
 if config.clone.depth > 0 {
     cmd.arg("--depth").arg(config.clone.depth.to_string());
 }
-cmd.arg(url).arg(dest);
+cmd.arg(url).arg(&dest);
 ```
 
-Everything is delegated to `git clone` — credential helpers, progress, submodule and
+`std::path::absolute` keeps the printed path absolute even when `root` is configured
+relative, matching the stdout contract. Everything else is delegated to `git clone` —
+credential helpers, progress, submodule and
 `init.defaultBranch` behaviour included. The only `rt` decision here is `clone.depth`
 (default `1`), a speed/storage tradeoff that suits the one-checkout-per-repository case.
 
@@ -128,18 +131,20 @@ The consequence is that an ordinary clone's history may be shallow, which is fin
 
 ### 5.1 Algorithm
 
-Every git command inherits stdio, as `git clone` does, so credentials and progress keep
-working. Everything that can be validated is validated before the first git command runs,
-which is what makes rollback (§6) trivial.
+The git commands that can prompt or make progress inherit stdio, as `git clone` does, so
+credentials and progress keep working. Everything that can be validated is validated before
+the repository is created, which is what makes rollback (§6) trivial.
 
 ```
 0. remote = Remote::parse(url); dest = mapping::repo_path(root, remote)
 1. bail if dest exists
 2. create dest's parent directories
 3. default = git ls-remote --symref <url> HEAD     -> refs/heads/<name>
+   - with --worktree=<branch>, a missing HEAD is not fatal: the requested branch becomes
+     the bare repository's HEAD
 4. branch = requested (--worktree=<branch>) or default
    - reject when git check-ref-format --branch fails
-   - reject when the branch is not the default and origin has no refs/heads/<branch>
+   - reject when the branch is not a known default and origin has no refs/heads/<branch>
    - reject when it is a reserved worktree name
 5. git init --bare --quiet <dest>
 6. git -C <dest> remote add origin <url>
@@ -229,8 +234,8 @@ Git does not catch these, and one of them is not caught at all (measured):
   `Removing worktrees/.git: not a valid directory`.
 
 The guard is therefore a correctness requirement, not a nicer error message. `rt` rejects
-such names before creating anything, with an error naming the offending component. Only the
-first component is compared, so `feature/login` is fine and maps to `A/feature/login` —
+such names before creating the repository, with an error naming the offending component.
+Only the first component is compared, so `feature/login` is fine and maps to `A/feature/login` —
 flattening it to `A/feature-login` was rejected because it would make the checkout path
 underivable from the branch name.
 
@@ -254,12 +259,12 @@ when listing a bare repository.
 
 ## 6. Validation and failure handling
 
-Validation before side effects means that when a git command does fail, everything on disk
-was created by this run and may be removed.
+Validation before the repository exists means that when a git command does fail, the
+repository at `dest` was created by this run and may be removed.
 
 | Failure | State on disk | Behaviour |
 | --- | --- | --- |
-| bad URL / invalid branch name / unknown branch / reserved name | nothing | error before the first git command |
+| bad URL / invalid branch name / unknown branch / reserved name | no repository at `dest` (parent directories may exist) | error before the repository is created |
 | `init --bare`, `remote add`, `config` | empty `dest` | remove `dest`, propagate the error |
 | `fetch` (network, auth, empty remote) | bare `dest`, no refs | remove `dest`, surface git's stderr |
 | `worktree add` | bare `dest` with refs | remove `dest`, propagate |
@@ -269,19 +274,21 @@ destination is known and disarmed on success, so an early `?` cannot leave a hal
 repository behind. This keeps the command retryable: leftovers at the deterministic path
 would make the next attempt fail with `repository already exists at …`.
 
-Pre-flight checks, in order (each one fails before anything is created):
+Pre-flight checks, in order (each one fails before `dest` is created):
 
 1. the destination does not exist — `repository already exists at <path>`;
-2. the remote's `HEAD` resolves to a branch — otherwise
-   `could not determine the default branch of <url>; pass --worktree=<branch>`;
+2. the remote's `HEAD` resolves to a branch, unless `--worktree=<branch>` names one
+   explicitly — otherwise `could not determine the default branch of <url>; pass
+   --worktree=<branch>`;
 3. `--worktree=<branch>` names a valid ref (`git check-ref-format --branch`);
-4. `--worktree=<branch>` exists on `origin` (unless it *is* the default branch, which step 2
-   already proved);
+4. `--worktree=<branch>` exists on `origin` (unless it is a known default branch, which
+   step 2 already proved);
 5. the branch is not a reserved worktree name (§5.4).
 
 ## 7. Configuration surface
 
-`rt clone` reads two keys, and the bare layout adds none:
+`rt clone` reads `root` and `clone.depth`, plus the `integrations.*` switches; the bare
+layout adds no key:
 
 | Key | Ordinary clone | `--worktree` |
 | --- | --- | --- |
@@ -305,7 +312,8 @@ if config.integrations.autojump { integrations::autojump::add(&checkout).await?;
 The path a user can `cd` into is the only useful one to register. A hook failure is a hard
 error here (the checkout exists, but the command reports failure) — `rt wt add` takes the
 opposite decision and downgrades the same failure to a warning. Neither is obviously right;
-the inconsistency is recorded rather than resolved (both behaviours are pinned by tests).
+the inconsistency is recorded rather than resolved (the integration suite covers neither
+hook).
 
 ## 9. Compatibility
 
@@ -343,10 +351,13 @@ addressed through a `url.*.insteadOf` rewrite (`tests/common/mod.rs`).
 | `keeps_every_branch_usable_at_the_default_depth` | no `--single-branch` regression (§5.2 item 3) |
 | `worktrees_can_be_merged_despite_the_default_depth` | full history on the worktree path (§5.3) |
 | `accepts_an_explicit_branch` | `--worktree=<branch>`, bare `HEAD` untouched |
+| `accepts_an_explicit_branch_when_the_remote_has_no_head` | `--worktree=<branch>` without a remote HEAD; the branch becomes the bare `HEAD` |
+| `rejects_an_explicit_branch_that_is_not_on_a_remote_without_head` | the same fallback still validates the branch |
 | `rejects_a_branch_that_is_not_on_the_remote` | validation before side effects |
 | `rejects_a_branch_that_git_keeps_for_itself` | reserved names (§5.4) |
 | `removes_a_half_built_repository_when_the_remote_is_unreachable` | rollback (§6) |
 | `a_plain_clone_is_still_an_ordinary_clone` | no regression, and `clone.depth` still applies |
+| `a_plain_clone_prints_an_absolute_path_for_a_relative_root` | the stdout path contract with a relative `root` |
 
 `tests/tree.rs` covers the rendering of both layouts; `tests/worktree.rs`, `tests/wt.rs` and
 `tests/delete.rs` cover what happens to a bare layout afterwards, and are documented in

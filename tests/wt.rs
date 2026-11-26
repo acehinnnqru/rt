@@ -166,10 +166,25 @@ fn the_delete_spelling_still_removes_a_worktree() {
 #[test]
 fn every_command_fails_outside_a_repository() {
     let fixture = Fixture::new("wt-outside");
+    let commands = [
+        vec!["wt", "add", "dev"],
+        vec!["wt", "list"],
+        vec!["wt", "remove", "dev"],
+        vec!["wt", "prune"],
+        vec!["wt", "path", "dev"],
+        vec!["wt", "lock", "dev"],
+        vec!["wt", "unlock", "dev"],
+        vec!["wt", "move", "dev", "out"],
+        vec!["worktree", "list"],
+    ];
 
-    let output = fixture.rt_err(&["wt", "list"]);
-
-    assert!(output.contains("not inside a git repository"), "{output}");
+    for args in &commands {
+        let output = fixture.rt_err(args);
+        assert!(
+            output.contains("not inside a git repository"),
+            "rt {args:?}: {output}"
+        );
+    }
 }
 
 /// The `list` rows with the repository prefix stripped, so the assertion does not depend on

@@ -4,6 +4,8 @@
 
 mod common;
 
+use std::path::Path;
+
 use common::{Fixture, URL, assert_same_path};
 
 #[test]
@@ -148,6 +150,35 @@ fn accepts_an_explicit_branch() {
 }
 
 #[test]
+fn accepts_an_explicit_branch_when_the_remote_has_no_head() {
+    let fixture = Fixture::new("wt-no-head");
+    fixture.hide_origin_head();
+
+    let stdout = fixture.rt_ok(&["clone", URL, "--worktree=dev"]);
+
+    assert_same_path(&stdout, &fixture.worktree("dev"));
+    assert_eq!(fixture.ref_name(&fixture.worktree("dev"), "HEAD"), "dev");
+    // With no default branch to name, the requested branch becomes the bare HEAD.
+    assert_eq!(
+        fixture
+            .git(&fixture.repo(), &["symbolic-ref", "--short", "HEAD"])
+            .trim(),
+        "dev"
+    );
+}
+
+#[test]
+fn rejects_an_explicit_branch_that_is_not_on_a_remote_without_head() {
+    let fixture = Fixture::new("wt-no-head-missing");
+    fixture.hide_origin_head();
+
+    let output = fixture.rt_err(&["clone", URL, "--worktree=nope"]);
+
+    assert!(output.contains("does not exist on"), "{output}");
+    assert!(!fixture.repo().exists(), "nothing should be created");
+}
+
+#[test]
 fn rejects_a_branch_that_is_not_on_the_remote() {
     let fixture = Fixture::new("wt-missing");
     let output = fixture.rt_err(&["clone", URL, "--worktree=nope"]);
@@ -196,4 +227,16 @@ fn a_plain_clone_is_still_an_ordinary_clone() {
         fixture.git(&repo, &["rev-list", "--count", "HEAD"]).trim(),
         "1"
     );
+}
+
+#[test]
+fn a_plain_clone_prints_an_absolute_path_for_a_relative_root() {
+    let fixture = Fixture::new("plain-relative");
+    fixture.set_config_root("r");
+
+    let stdout = fixture.rt_ok(&["clone", URL]);
+    let printed = stdout.trim();
+
+    assert!(Path::new(printed).is_absolute(), "{printed}");
+    assert!(Path::new(printed).join(".git").is_dir());
 }

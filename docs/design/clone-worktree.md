@@ -2,9 +2,9 @@
 
 Status: implemented; kept as the original design draft and verification log. The current,
 consolidated description of `rt clone` is [`clone.md`](clone.md); the user-facing guide is
-[`../usage.md`](../usage.md). Where this document and the later
-[`worktree-commands.md`](worktree-commands.md) disagree — §7.2's repository resolution in
-particular — the later document is the implemented design.
+[`../usage.md`](../usage.md). Where this document and the later documents disagree — §7.1's
+tree walk, §7.2's repository resolution and §7.3's delete semantics in particular — the later
+documents are the implemented design.
 Scope: `rt clone`, `rt worktree *`, `rt tree`, `rt delete`
 
 ## 1. Motivation
@@ -71,8 +71,9 @@ command runs, which is what makes rollback (§8) trivial.
 0. `remote = Remote::parse(url)`, `dest = mapping::repo_path(&config.root, &remote)`.
 1. Bail if `dest` exists — unchanged from today.
 2. Probe the default branch: `git ls-remote --symref <url> HEAD`, parse
-   `ref: refs/heads/<name>\tHEAD`. Fail clearly when the remote is empty or the probe yields
-   nothing.
+   `ref: refs/heads/<name>\tHEAD`. Fail clearly when the probe yields nothing and no
+   `--worktree=<branch>` was given; with an explicit branch, verify that branch instead and
+   use it as the bare repository's HEAD.
 3. Resolve the requested branch (`--worktree=<branch>` or the probed default) and reject
    names that collide with git's administrative entries (§5) or that do not exist on
    `origin`.
@@ -226,18 +227,18 @@ worktree path underivable from the branch name, which is the property users actu
 
 ### 7.1 `rt tree` (a bug fix this feature makes mandatory)
 
-`is_git_repo()` only looks for `dir.join(".git")`, so a bare repository is not recognised as
-a leaf: `rt tree` would descend into `A/objects/**` and `A/refs/**` and print thousands of
-nonsense lines. This is already broken today for any bare repository under `root`; the
-feature just makes it the common case.
+`is_repo()` only looks for `dir.join(".git")`, so a bare repository is not recognised as a
+leaf: `rt tree` would descend into `A/objects/**` and `A/refs/**` and print thousands of
+nonsense lines. This was already broken for any bare repository under `root` before the
+feature; the feature just made it the common case.
 
 Plan:
 
-- add `is_bare_repo(dir)`: `dir/HEAD` is a file, `dir/objects` and `dir/refs` are
+- add `is_bare(dir)`: `dir/HEAD` is a file, `dir/objects` and `dir/refs` are
   directories;
 - when a directory is bare, print it and then descend, skipping git's administrative entries
   (§5) — linked worktrees are direct children and stop the walk themselves;
-- share one `GIT_ADMIN_ENTRIES` constant with the reserved-name check.
+- share one `git::ADMIN_ENTRIES` constant with the reserved-name check.
 
 Resulting output:
 
@@ -269,28 +270,33 @@ inside `A/main` would produce `A/main-hotfix`. New rule: resolve the project roo
    no change.
 4. Still print the created path.
 
-This is also why the command needs `config.root`: its `Config` parameter is currently unused.
+At the time of writing this design, the command's `Config` parameter was unused; the
+implemented command uses it only for the integrations.
 
 ### 7.3 `rt delete`
 
 - `rt delete <url|path>` keeps using `remove_dir_all`, which removes the bare repository and
-  every worktree with it. Print the path as today.
-- `rt delete` with no argument inside a linked worktree currently deletes just that directory
-  and leaves a dangling `A/worktrees/<id>` registration behind. The target there is a
-  worktree, not a repository, so use `git worktree remove <path>` instead: git refuses when
-  the tree is dirty (better than silently discarding work) and prunes the registration
-  itself. Removing the whole project still requires naming it (`rt delete A` or the URL).
+  every worktree with it. Print the path as before.
+- `rt delete` with no argument inside a linked worktree deleted just that directory at the
+  time of writing and left a dangling `A/worktrees/<id>` registration behind. The target
+  there is a worktree, not a repository, so use `git worktree remove <path>` instead: git
+  refuses when the tree is dirty (better than silently discarding work) and prunes the
+  registration itself. Removing the whole project still requires naming it (`rt delete A` or
+  the URL).
 - Deleting a bare repository that still has registered worktrees stays allowed and takes the
   worktrees with it.
 
+Current behaviour: every deletion is confirmed (with a second question when a checkout holds
+uncommitted work) unless `--force`; see [`../usage.md`](../usage.md) §5.
+
 ## 8. Failure and rollback
 
-Because validation happens before any git command, everything on disk was created by this run
-and may be removed on failure.
+Because validation happens before the repository is created, the repository on disk was
+created by this run and may be removed on failure.
 
 | Failure | State on disk | Behaviour |
 | --- | --- | --- |
-| bad URL / unknown branch / reserved name | nothing | error before the first git command |
+| bad URL / unknown branch / reserved name | no repository at `dest` (parent directories may exist) | error before the repository is created |
 | `init --bare`, `remote add`, `config` | empty `dest` | remove `dest`, propagate the error |
 | `fetch` (network, auth, empty remote) | bare `dest`, no refs | remove `dest`, surface git's stderr |
 | `worktree add` | bare `dest` with refs | remove `dest`, propagate |
@@ -317,9 +323,9 @@ flag as implemented.
 
 ## 11. Testing
 
-Unit tests stay next to the code, per AGENTS.md; anything that needs a real git process goes
-into the (currently empty) `tests/` directory. The crate is binary-only, so integration tests
-drive the built binary through `env!("CARGO_BIN_EXE_rt")` and cannot `use rt::...`.
+Unit tests stay next to the code; anything that needs a real git process goes into `tests/`.
+The crate is binary-only, so integration tests drive the built binary through
+`env!("CARGO_BIN_EXE_rt")` and cannot `use rt::...`.
 
 Each integration test gets a throwaway `HOME` (so `~/.rt.toml` is ours), a throwaway root, and
 a fixture origin created with `git init` plus one commit and at least a second branch,

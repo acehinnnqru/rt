@@ -8,14 +8,16 @@ derived from its remote URL, under one configured root: `{root}/{host}/{owner}/{
 | Document | What it is |
 | --- | --- |
 | [`usage.md`](usage.md) | The user guide: concepts, configuration, path mapping, the full command reference, workflows, the stdout/stderr contract, and troubleshooting. |
-| [`../README.md`](../README.md) | The short pitch, project layout and build/test commands. |
+| [`../README.md`](../README.md) | The short pitch, installation, configuration and command summary. |
 
 ## Design records
 
 These explain *why* the implementation looks the way it does, including the git behaviour
 each decision rests on. They are records of decisions taken, not proposals: the code and
-the tests are the authority, and every claim of the form "git does X" was measured (the
-measurement logs are in the last section of each document).
+the tests are the authority, and every claim of the form "git does X" was measured. The logs
+are in [`design/clone-worktree.md`](design/clone-worktree.md) §13 and
+[`design/worktree-commands.md`](design/worktree-commands.md) §10; `design/clone.md` cites
+them.
 
 | Document | Covers |
 | --- | --- |
